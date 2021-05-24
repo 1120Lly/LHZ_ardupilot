@@ -1,3 +1,5 @@
+//公用函数都放这里了
+
 #include "Copter.h"
 
 /*

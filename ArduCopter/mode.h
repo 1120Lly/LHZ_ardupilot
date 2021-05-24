@@ -17,7 +17,7 @@ public:
         ALT_HOLD =      2,  // manual airframe angle with automatic throttle
         AUTO =          3,  // fully automatic waypoint control using mission commands
         GUIDED =        4,  // fully automatic fly to coordinate or fly at velocity/direction using GCS immediate commands
-        LOITER =        5,  // automatic horizontal acceleration with automatic throttle
+        LOITER =        5,  // 定点模式 automatic horizontal acceleration with automatic throttle
         RTL =           6,  // automatic return to launching point
         CIRCLE =        7,  // automatic circular flight with automatic throttle
         LAND =          9,  // automatic landing with horizontal position control
@@ -29,7 +29,7 @@ public:
         BRAKE =        17,  // full-brake using inertial/GPS system, no pilot input
         THROW =        18,  // throw to launch mode using inertial/GPS system, no pilot input
         AVOID_ADSB =   19,  // automatic avoidance of obstacles in the macro scale - e.g. full-sized aircraft
-        GUIDED_NOGPS = 20,  // guided mode but only accepts attitude and altitude
+        GUIDED_NOGPS = 20,  // 引导模式 guided mode but only accepts attitude and altitude
         SMART_RTL =    21,  // SMART_RTL returns to home by retracing its steps
         FLOWHOLD  =    22,  // FLOWHOLD holds position with optical flow without rangefinder
         FOLLOW    =    23,  // follow attempts to follow another vehicle or ground station

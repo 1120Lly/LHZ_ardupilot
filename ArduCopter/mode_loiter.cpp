@@ -114,9 +114,10 @@ void ModeLoiter::run()
     AltHoldModeState loiter_state = get_alt_hold_state(target_climb_rate);
 
     // Loiter State Machine
+    // 飞行器在不同状态下进入定点模式的方法
     switch (loiter_state) {
 
-    case AltHold_MotorStopped:
+    case AltHold_MotorStopped: // 在锁定状态
         attitude_control->reset_rate_controller_I_terms();
         attitude_control->set_yaw_target_to_current_heading();
         pos_control->relax_alt_hold_controllers(0.0f);   // forces throttle output to go to zero
@@ -125,7 +126,7 @@ void ModeLoiter::run()
         pos_control->update_z_controller();
         break;
 
-    case AltHold_Takeoff:
+    case AltHold_Takeoff: // 在起飞过程中
         // initiate take-off
         if (!takeoff.running()) {
             takeoff.start(constrain_float(g.pilot_takeoff_alt,0.0f,1000.0f));
@@ -149,11 +150,11 @@ void ModeLoiter::run()
         pos_control->update_z_controller();
         break;
 
-    case AltHold_Landed_Ground_Idle:
+    case AltHold_Landed_Ground_Idle: // 在地面空闲状态
         attitude_control->set_yaw_target_to_current_heading();
         // FALLTHROUGH
 
-    case AltHold_Landed_Pre_Takeoff:
+    case AltHold_Landed_Pre_Takeoff: // 在准备起飞时
         attitude_control->reset_rate_controller_I_terms_smoothly();
         loiter_nav->init_target();
         attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(0.0f, 0.0f, 0.0f);
@@ -161,14 +162,14 @@ void ModeLoiter::run()
         pos_control->update_z_controller();
         break;
 
-    case AltHold_Flying:
+    case AltHold_Flying: // 在飞行中 这是主要情况
         // set motors to full range
         motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
 #if PRECISION_LANDING == ENABLED
         if (do_precision_loiter()) {
-            precision_loiter_xy();
-        }
+            precision_loiter_xy(); }// 精准降落 一般飞行不会用到
+
 #endif
 
         // run loiter controller

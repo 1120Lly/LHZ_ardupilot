@@ -1,9 +1,10 @@
+// »’÷æ¥Ê¥¢
+// Code to Write and Read packets from AP_Logger log memory
+// Code to interact with the user to dump or erase logs
+
 #include "Copter.h"
 
 #if LOGGING_ENABLED == ENABLED
-
-// Code to Write and Read packets from AP_Logger log memory
-// Code to interact with the user to dump or erase logs
 
 struct PACKED log_Control_Tuning {
     LOG_PACKET_HEADER;

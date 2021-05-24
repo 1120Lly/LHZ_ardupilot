@@ -1,3 +1,5 @@
+// ½âËø
+
 #include "Copter.h"
 
 // performs pre-arm checks. expects to be called at 1hz.

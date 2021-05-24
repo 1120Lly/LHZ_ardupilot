@@ -1,3 +1,5 @@
+// ×Ô¶¯º½Ïò
+
 #include "Copter.h"
 
 Mode::AutoYaw Mode::auto_yaw;

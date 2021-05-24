@@ -219,8 +219,8 @@ void AC_Loiter::update()
     _pos_control.set_max_speed_xy(_speed_cms);
     _pos_control.set_max_accel_xy(_accel_cmss);
 
-    calc_desired_velocity(dt);
-    _pos_control.update_xy_controller();
+    calc_desired_velocity(dt); // 计算目标速度
+    _pos_control.update_xy_controller(); // 水平控制器
 }
 
 // sanity check parameters

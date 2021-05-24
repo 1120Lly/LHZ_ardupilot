@@ -1,77 +1,5 @@
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
- *  ArduCopter (also known as APM, APM:Copter or just Copter)
- *  Wiki:           copter.ardupilot.org
- *  Creator:        Jason Short
- *  Lead Developer: Randy Mackay
- *  Lead Tester:    Marco Robustini
- *  Based on code and ideas from the Arducopter team: Leonard Hall, Andrew Tridgell, Robert Lefebvre, Pat Hickey, Michael Oborne, Jani Hirvinen,
-                                                      Olivier Adler, Kevin Hester, Arthur Benemann, Jonathan Challinger, John Arne Birkeland,
-                                                      Jean-Louis Naudin, Mike Smith, and more
- *  Thanks to:	Chris Anderson, Jordi Munoz, Jason Short, Doug Weibel, Jose Julio
- *
- *  Special Thanks to contributors (in alphabetical order by first name):
- *
- *  Adam M Rivera       :Auto Compass Declination
- *  Amilcar Lucas       :Camera mount library
- *  Andrew Tridgell     :General development, Mavlink Support
- *  Angel Fernandez     :Alpha testing
- *  AndreasAntonopoulous:GeoFence
- *  Arthur Benemann     :DroidPlanner GCS
- *  Benjamin Pelletier  :Libraries
- *  Bill King           :Single Copter
- *  Christof Schmid     :Alpha testing
- *  Craig Elder         :Release Management, Support
- *  Dani Saez           :V Octo Support
- *  Doug Weibel	        :DCM, Libraries, Control law advice
- *  Emile Castelnuovo   :VRBrain port, bug fixes
- *  Gregory Fletcher    :Camera mount orientation math
- *  Guntars             :Arming safety suggestion
- *  HappyKillmore       :Mavlink GCS
- *  Hein Hollander      :Octo Support, Heli Testing
- *  Igor van Airde      :Control Law optimization
- *  Jack Dunkle         :Alpha testing
- *  James Goppert       :Mavlink Support
- *  Jani Hiriven        :Testing feedback
- *  Jean-Louis Naudin   :Auto Landing
- *  John Arne Birkeland	:PPM Encoder
- *  Jose Julio          :Stabilization Control laws, MPU6k driver
- *  Julien Dubois       :PosHold flight mode
- *  Julian Oes          :Pixhawk
- *  Jonathan Challinger :Inertial Navigation, CompassMot, Spin-When-Armed
- *  Kevin Hester        :Andropilot GCS
- *  Max Levine          :Tri Support, Graphics
- *  Leonard Hall        :Flight Dynamics, Throttle, Loiter and Navigation Controllers
- *  Marco Robustini     :Lead tester
- *  Michael Oborne      :Mission Planner GCS
- *  Mike Smith          :Pixhawk driver, coding support
- *  Olivier Adler       :PPM Encoder, piezo buzzer
- *  Pat Hickey          :Hardware Abstraction Layer (HAL)
- *  Robert Lefebvre     :Heli Support, Copter LEDs
- *  Roberto Navoni      :Library testing, Porting to VRBrain
- *  Sandro Benigno      :Camera support, MinimOSD
- *  Sandro Tognana      :PosHold flight mode
- *  Sebastian Quilter   :SmartRTL
- *  ..and many more.
- *
- *  Code commit statistics can be found here: https://github.com/ArduPilot/ardupilot/graphs/contributors
- *  Wiki: http://copter.ardupilot.org/
- *
- */
+// APM主函数
+// ArduCopter (also known as APM, APM:Copter or just Copter)
 
 #include "Copter.h"
 
@@ -91,7 +19,7 @@ const AP_HAL::HAL& hal = AP_HAL::get_HAL();
 const AP_Scheduler::Task Copter::scheduler_tasks[] = {
     SCHED_TASK(rc_loop,              100,    130),
     SCHED_TASK(throttle_loop,         50,     75),
-    SCHED_TASK(update_GPS,            50,    200),
+    SCHED_TASK(update_GPS,            50,    200), //调用频率为50Hz
 #if OPTFLOW == ENABLED
     SCHED_TASK_CLASS(OpticalFlow,          &copter.optflow,             update,         200, 160),
 #endif
@@ -211,7 +139,6 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
 
 constexpr int8_t Copter::_failsafe_priorities[7];
 
-
 void Copter::setup()
 {
     // Load the default values of variables listed in var_info[]s
@@ -230,13 +157,13 @@ void Copter::loop()
 }
 
 
-// Main loop - 400hz
+// 主循环 Main loop - 400hz 快速
 void Copter::fast_loop()
 {
-    // update INS immediately to get current gyro data populated
+    // 先更新惯性导航 update INS immediately to get current gyro data populated
     ins.update();
 
-    // run low level rate controllers that only require IMU data
+    // 再运行姿态控制器 run low level rate controllers that only require IMU data
     attitude_control->rate_controller_run();
 
     // send outputs to the motors library immediately
@@ -261,7 +188,7 @@ void Copter::fast_loop()
     check_ekf_reset();
 
     // run the attitude controllers
-    update_flight_mode();
+    update_flight_mode(); //更新飞行模式
 
     // update home from EKF if necessary
     update_home_from_EKF();

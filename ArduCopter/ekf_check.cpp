@@ -1,11 +1,7 @@
-#include "Copter.h"
+// 电调校准
+//  Detects failures of the ekf or inertial nav system triggers an alert to the pilot and helps take countermeasures
 
-/**
- *
- * Detects failures of the ekf or inertial nav system triggers an alert
- * to the pilot and helps take countermeasures
- *
- */
+#include "Copter.h"
 
 #ifndef EKF_CHECK_ITERATIONS_MAX
  # define EKF_CHECK_ITERATIONS_MAX          10      // 1 second (ie. 10 iterations at 10hz) of bad variances signals a failure

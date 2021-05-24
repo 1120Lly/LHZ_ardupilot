@@ -1,8 +1,7 @@
-#include "Copter.h"
+// 磁罗盘与电机之间干扰的消除与校准
+// compass/motor interference calibration
 
-/*
-  compass/motor interference calibration
- */
+#include "Copter.h"
 
 // setup_compassmot - sets compass's motor interference parameters
 MAV_RESULT Copter::mavlink_compassmot(const GCS_MAVLINK &gcs_chan)

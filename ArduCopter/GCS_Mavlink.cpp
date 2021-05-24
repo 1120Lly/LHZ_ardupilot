@@ -1,15 +1,20 @@
-#include "Copter.h"
+// 地面站通信协议
 
+#include "Copter.h"
 #include "GCS_Mavlink.h"
 
 /*
- *  !!NOTE!!
+ *  !!NOTE!!注意
  *
  *  the use of NOINLINE separate functions for each message type avoids
  *  a compiler bug in gcc that would cause it to use far more stack
  *  space than is needed. Without the NOINLINE we use the sum of the
  *  stack needed for each message type. Please be careful to follow the
  *  pattern below when adding any new messages
+ *
+ *  为每个消息类型使用NOINLINE单独函数，避免了gcc中的编译器错误，这种错误
+ *  会导致使用比所需多得多的堆栈空间。如果没有NOINLINE，我们将使用每种消息
+ *  类型所需的堆栈之和。当添加任何新消息时，请注意遵循下面的模式
  */
 
 MAV_TYPE GCS_Copter::frame_type() const

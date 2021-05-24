@@ -860,13 +860,13 @@ void AC_PosControl::update_xy_controller()
     check_for_ekf_xy_reset();
 
     // check if xy leash needs to be recalculated
-    calc_leash_length_xy();
+    calc_leash_length_xy(); // 计算狗绳长度
 
     // translate any adjustments from pilot to loiter target
     desired_vel_to_pos(dt);
 
     // run horizontal position controller
-    run_xy_controller(dt);
+    run_xy_controller(dt); // 主要控制器
 
     // update xy update time
     _last_update_xy_us = now_us;
@@ -1061,21 +1061,21 @@ void AC_PosControl::run_xy_controller(float dt)
         _vel_target.y = 0.0f;
     } else {
         // calculate distance error
-        _pos_error.x = _pos_target.x - curr_pos.x;
+        _pos_error.x = _pos_target.x - curr_pos.x; // 位置差值=目标位置-当前位置
         _pos_error.y = _pos_target.y - curr_pos.y;
 
         // Constrain _pos_error and target position
         // Constrain the maximum length of _vel_target to the maximum position correction velocity
         // TODO: replace the leash length with a user definable maximum position correction
-        if (limit_vector_length(_pos_error.x, _pos_error.y, _leash)) {
+        if (limit_vector_length(_pos_error.x, _pos_error.y, _leash)) { //位置差值通过狗绳限幅
             _pos_target.x = curr_pos.x + _pos_error.x;
             _pos_target.y = curr_pos.y + _pos_error.y;
         }
 
-        _vel_target = sqrt_controller(_pos_error, kP, _accel_cms);
+        _vel_target = sqrt_controller(_pos_error, kP, _accel_cms); // 开平方控制器，得到目标速度
     }
 
-    // add velocity feed-forward
+    // 目标速度前馈到飞手期望速度 add velocity feed-forward
     _vel_target.x += _vel_desired.x;
     _vel_target.y += _vel_desired.y;
 
@@ -1091,7 +1091,7 @@ void AC_PosControl::run_xy_controller(float dt)
         _vehicle_horiz_vel.y = _inav.get_velocity().y;
     }
 
-    // calculate velocity error
+    // 计算速度差值 calculate velocity error
     _vel_error.x = _vel_target.x - _vehicle_horiz_vel.x;
     _vel_error.y = _vel_target.y - _vehicle_horiz_vel.y;
     // TODO: constrain velocity error and velocity target
