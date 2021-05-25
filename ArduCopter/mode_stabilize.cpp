@@ -1,21 +1,20 @@
 #include "Copter.h"
 
-/*
- * Init and run calls for stabilize flight mode
- */
+// 初始化和运行稳定飞行模式的调用 Init and run calls for stabilize flight mode
 
-// stabilize_run - runs the main stabilize controller
+// 运行主要增稳控制器 stabilize_run - runs the main stabilize controller
 // should be called at 100hz or more
 void ModeStabilize::run()
 {
     // apply simple mode transform to pilot inputs
     update_simple_mode();
 
-    // convert pilot input to lean angles
+    // 获得飞行器的期望倾斜角度 convert pilot input to lean angles
+    // 输出target_roll，target_pitch
     float target_roll, target_pitch;
     get_pilot_desired_lean_angles(target_roll, target_pitch, copter.aparm.angle_max, copter.aparm.angle_max);
 
-    // get pilot's desired yaw rate
+    // 获得飞行器的期望航向速率 get pilot's desired yaw rate
     float target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->get_control_in());
 
     if (!motors->armed()) {

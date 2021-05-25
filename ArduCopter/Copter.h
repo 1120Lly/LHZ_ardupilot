@@ -246,7 +246,7 @@ public:
 private:
     static const AP_FWVersion fwver;
 
-    // key aircraft parameters passed to multiple libraries
+    // 传递给多个库的关键飞行器参数 key aircraft parameters passed to multiple libraries
     AP_Vehicle::MultiCopter aparm;
 
     // Global parameters are all contained within the 'g' class.

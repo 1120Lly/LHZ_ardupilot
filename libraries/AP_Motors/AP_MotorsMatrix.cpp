@@ -19,21 +19,22 @@
  *
  */
 #include <AP_HAL/AP_HAL.h>
+// 电机控制分配矩阵
 #include "AP_MotorsMatrix.h"
 
 extern const AP_HAL::HAL& hal;
 
-// init
+// 初始化 init
 void AP_MotorsMatrix::init(motor_frame_class frame_class, motor_frame_type frame_type)
 {
-    // record requested frame class and type
+    // 记录请求的机架种类和类型 record requested frame class and type
     _last_frame_class = frame_class;
     _last_frame_type = frame_type;
 
     // setup the motors
     setup_motors(frame_class, frame_type);
 
-    // enable fast channels or instant pwm
+    // 启用快速通道或即时PWM enable fast channels or instant pwm
     set_update_rate(_speed_hz);
 }
 
@@ -52,7 +53,9 @@ void AP_MotorsMatrix::set_update_rate(uint16_t speed_hz)
     rc_set_freq(mask, _speed_hz);
 }
 
-// set frame class (i.e. quad, hexa, heli) and type (i.e. x, plus)
+// 设定 set frame class (i.e. quad, hexa, heli) and type (i.e. x, plus)
+// 机架种类包括四旋翼、六旋翼和直升机
+// 机架类型包括X形和十字形
 void AP_MotorsMatrix::set_frame_class_and_type(motor_frame_class frame_class, motor_frame_type frame_type)
 {
     // exit immediately if armed or no change
@@ -103,7 +106,7 @@ void AP_MotorsMatrix::output_to_motors()
             break;
     }
 
-    // convert output to PWM and send to each motor
+    // 将输出转换为PWM并发送到每个电机 convert output to PWM and send to each motor
     for (i = 0; i < AP_MOTORS_MAX_NUM_MOTORS; i++) {
         if (motor_enabled[i]) {
             rc_write(i, output_to_pwm(_actuator[i]));

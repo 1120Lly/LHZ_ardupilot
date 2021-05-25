@@ -1,4 +1,5 @@
-// APM主函数
+// 你好！APM主函数
+// 2021年5月25日 12:14 学习代码写注释
 // ArduCopter (also known as APM, APM:Copter or just Copter)
 
 #include "Copter.h"
@@ -394,6 +395,10 @@ void Copter::one_hz_loop()
 #endif
 
     AP_Notify::flags.flying = !ap.land_complete;
+
+    gcs().send_text(MAV_SEVERITY_CRITICAL,
+                     "Current altitude: %.1fm",
+                     copter.flightmode->get_alt_above_ground_cm()/100.0f);
 }
 
 // called at 50hz

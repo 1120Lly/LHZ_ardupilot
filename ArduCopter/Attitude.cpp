@@ -1,7 +1,7 @@
 #include "Copter.h"
 
 // transform pilot's yaw input into a desired yaw rate
-// returns desired yaw rate in centi-degrees per second
+// returns desired yaw rate in centi-degrees per second 百分之一度
 float Copter::get_pilot_desired_yaw_rate(int16_t stick_angle)
 {
     // throttle failsafe check
