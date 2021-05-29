@@ -1,22 +1,4 @@
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
- *       AP_MotorsTailsitter.cpp - ArduCopter motors library for tailsitters and bicopters
- *
- */
+//  AP_MotorsTailsitter.cpp - ArduCopter motors library for tailsitters and bicopters
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
@@ -30,10 +12,10 @@ extern const AP_HAL::HAL& hal;
 // init
 void AP_MotorsTailsitter::init(motor_frame_class frame_class, motor_frame_type frame_type)
 {
-    // setup default motor and servo mappings
+    // 设置默认的电机和伺服映射 setup default motor and servo mappings
     uint8_t chan;
 
-    // right throttle defaults to servo output 1
+    // 右油门默认为输出1 right throttle defaults to servo output 1
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleRight, CH_1);
     if (SRV_Channels::find_channel(SRV_Channel::k_throttleRight, chan)) {
         motor_enabled[chan] = true;
@@ -58,7 +40,8 @@ void AP_MotorsTailsitter::init(motor_frame_class frame_class, motor_frame_type f
 }
 
 
-/// Constructor
+// Constructor
+// 申请线程，以一定频率调用
 AP_MotorsTailsitter::AP_MotorsTailsitter(uint16_t loop_rate, uint16_t speed_hz) :
     AP_MotorsMulticopter(loop_rate, speed_hz)
 {
@@ -67,6 +50,7 @@ AP_MotorsTailsitter::AP_MotorsTailsitter(uint16_t loop_rate, uint16_t speed_hz) 
 
 
 // set update rate to motors - a value in hertz
+// 设定电机的更新频率，舵机不用
 void AP_MotorsTailsitter::set_update_rate(uint16_t speed_hz)
 {
     // record requested speed
@@ -76,6 +60,7 @@ void AP_MotorsTailsitter::set_update_rate(uint16_t speed_hz)
     SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleRight, speed_hz);
 }
 
+// 不同状态对电机和舵机的指令不同
 void AP_MotorsTailsitter::output_to_motors()
 {
     if (!_flags.initialised_ok) {
@@ -83,11 +68,11 @@ void AP_MotorsTailsitter::output_to_motors()
     }
 
     switch (_spool_state) {
-        case SpoolState::SHUT_DOWN:
+        case SpoolState::SHUT_DOWN: // 关机
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, get_pwm_output_min());
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, get_pwm_output_min());
             break;
-        case SpoolState::GROUND_IDLE:
+        case SpoolState::GROUND_IDLE: // 地面闲置
             set_actuator_with_slew(_actuator[1], actuator_spin_up_to_ground_idle());
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, output_to_pwm(actuator_spin_up_to_ground_idle()));
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, output_to_pwm(actuator_spin_up_to_ground_idle()));
@@ -100,14 +85,14 @@ void AP_MotorsTailsitter::output_to_motors()
             break;
     }
 
-    // Always output to tilt servos
+    // 始终输出给倾转舵机 Always output to tilt servos
     SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorLeft, _tilt_left*SERVO_OUTPUT_RANGE);
     SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorRight, _tilt_right*SERVO_OUTPUT_RANGE);
 
 }
 
-// get_motor_mask - returns a bitmask of which outputs are being used for motors (1 means being used)
-//  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
+//  get_motor_mask - returns a bitmask of which outputs are being used for motors (1 means being used)
+//  确保其他输出不冲突 this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
 uint16_t AP_MotorsTailsitter::get_motor_mask()
 {
     uint32_t motor_mask = 0;
@@ -125,7 +110,7 @@ uint16_t AP_MotorsTailsitter::get_motor_mask()
     return motor_mask;
 }
 
-// calculate outputs to the motors
+// 关键步骤：计算电机输出 calculate outputs to the motors
 void AP_MotorsTailsitter::output_armed_stabilizing()
 {
     float   roll_thrust;                // roll thrust input value, +/- 1.0
@@ -135,14 +120,14 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     float   thrust_max;                 // highest motor value
     float   thr_adj = 0.0f;             // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
 
-    // apply voltage and air pressure compensation
+    // 应用电压和气压补偿 apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
     roll_thrust = (_roll_in + _roll_in_ff) * compensation_gain;
     pitch_thrust = (_pitch_in + _pitch_in_ff) * compensation_gain;
     yaw_thrust = (_yaw_in + _yaw_in_ff) * compensation_gain;
     throttle_thrust = get_throttle() * compensation_gain;
 
-    // sanity check throttle is above zero and below current limited throttle
+    // 正常检查油门高于零，低于当前限制油门 sanity check throttle is above zero and below current limited throttle
     if (throttle_thrust <= 0.0f) {
         throttle_thrust = 0.0f;
         limit.throttle_lower = true;
@@ -152,11 +137,11 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
         limit.throttle_upper = true;
     }
 
-    // calculate left and right throttle outputs
+    // 这里是关键的控制分配方法 calculate left and right throttle outputs
     _thrust_left  = throttle_thrust + roll_thrust * 0.5f;
     _thrust_right = throttle_thrust - roll_thrust * 0.5f;
 
-    // if max thrust is more than one reduce average throttle
+    // 如果最大推力大于1，则降低平均油门 if max thrust is more than one, reduce average throttle
     thrust_max = MAX(_thrust_right,_thrust_left);
     if (thrust_max > 1.0f) {
         thr_adj = 1.0f - thrust_max;
@@ -165,11 +150,12 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
         limit.pitch = true;
     }
 
-    // Add adjustment to reduce average throttle
+    // 下面这些内容还不是很理解
+    // 增加调整以减少平均油门 Add adjustment to reduce average throttle
     _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
     _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
     _throttle = throttle_thrust + thr_adj;
-    // compensation_gain can never be zero
+    // 补偿增益永远不会为零 compensation_gain can never be zero
     _throttle_out = _throttle / compensation_gain;
 
     // thrust vectoring
