@@ -15,49 +15,59 @@ void AP_MotorsTailsitter::init(motor_frame_class frame_class, motor_frame_type f
     // 设置默认的电机和伺服映射 setup default motor and servo mappings
     uint8_t chan;
 
-    // 右油门默认为输出1 right throttle defaults to servo output 1
-    SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleRight, CH_1);
-    if (SRV_Channels::find_channel(SRV_Channel::k_throttleRight, chan)) {
-        motor_enabled[chan] = true;
-    }
+    // k_motor1 throttleLeft  左电机
+    // k_motor2 throttleRight 右电机
+    // k_motor3 throttleTailL 尾左电机
+    // k_motor4 throttleTailR 尾左电机
+    // k_motor5 tiltLeft      左倾转
+    // k_motor6 tiltRight     右倾转
+    // k_motor7 tiltTail      尾倾转
 
-    // left throttle defaults to servo output 2
-    SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleLeft, CH_2);
+    SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleLeft, CH_1);
     if (SRV_Channels::find_channel(SRV_Channel::k_throttleLeft, chan)) {
-        motor_enabled[chan] = true;
-    }
+        motor_enabled[chan] = true;    }
 
-    // right servo defaults to servo output 3
-    SRV_Channels::set_aux_channel_default(SRV_Channel::k_tiltMotorRight, CH_3);
-    SRV_Channels::set_angle(SRV_Channel::k_tiltMotorRight, SERVO_OUTPUT_RANGE);
+    SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleRight, CH_2);
+    if (SRV_Channels::find_channel(SRV_Channel::k_throttleRight, chan)) {
+        motor_enabled[chan] = true;    }
 
-    // left servo defaults to servo output 4
-    SRV_Channels::set_aux_channel_default(SRV_Channel::k_tiltMotorLeft, CH_4);
-    SRV_Channels::set_angle(SRV_Channel::k_tiltMotorLeft, SERVO_OUTPUT_RANGE);
+    SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleTailL, CH_3);
+    if (SRV_Channels::find_channel(SRV_Channel::k_throttleTailL, chan)) {
+        motor_enabled[chan] = true;    }
+
+    SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleTailR, CH_4);
+    if (SRV_Channels::find_channel(SRV_Channel::k_throttleTailR, chan)) {
+        motor_enabled[chan] = true;    }
+
+    SRV_Channels::set_aux_channel_default(SRV_Channel::k_tiltLeft, CH_5);
+    SRV_Channels::set_angle(SRV_Channel::k_tiltLeft, SERVO_OUTPUT_RANGE);
+
+    SRV_Channels::set_aux_channel_default(SRV_Channel::k_tiltRight, CH_6);
+    SRV_Channels::set_angle(SRV_Channel::k_tiltRight, SERVO_OUTPUT_RANGE);
+
+    SRV_Channels::set_aux_channel_default(SRV_Channel::k_tiltTail, CH_7);
+    SRV_Channels::set_angle(SRV_Channel::k_tiltTail, SERVO_OUTPUT_RANGE);
 
     // record successful initialisation if what we setup was the desired frame_class
     _flags.initialised_ok = (frame_class == MOTOR_FRAME_TAILSITTER);
 }
 
-
-// Constructor
-// 申请线程，以一定频率调用
+// 申请线程，以一定频率调用 Constructor
 AP_MotorsTailsitter::AP_MotorsTailsitter(uint16_t loop_rate, uint16_t speed_hz) :
     AP_MotorsMulticopter(loop_rate, speed_hz)
 {
     set_update_rate(speed_hz);
 }
 
-
-// set update rate to motors - a value in hertz
-// 设定电机的更新频率，舵机不用
+// 设定电机的更新频率，舵机不用 set update rate to motors - a value in hertz
 void AP_MotorsTailsitter::set_update_rate(uint16_t speed_hz)
 {
-    // record requested speed
-    _speed_hz = speed_hz;
+    _speed_hz = speed_hz;  // record requested speed
 
     SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleLeft, speed_hz);
     SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleRight, speed_hz);
+    SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleTailL, speed_hz);
+    SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleTailR, speed_hz);
 }
 
 // 不同状态对电机和舵机的指令不同
@@ -71,24 +81,30 @@ void AP_MotorsTailsitter::output_to_motors()
         case SpoolState::SHUT_DOWN: // 关机
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, get_pwm_output_min());
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, get_pwm_output_min());
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTailL, get_pwm_output_min());
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTailR, get_pwm_output_min());
             break;
         case SpoolState::GROUND_IDLE: // 地面闲置
             set_actuator_with_slew(_actuator[1], actuator_spin_up_to_ground_idle());
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, output_to_pwm(actuator_spin_up_to_ground_idle()));
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, output_to_pwm(actuator_spin_up_to_ground_idle()));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTailL, output_to_pwm(actuator_spin_up_to_ground_idle()));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTailR, output_to_pwm(actuator_spin_up_to_ground_idle()));
             break;
         case SpoolState::SPOOLING_UP:
         case SpoolState::THROTTLE_UNLIMITED:
         case SpoolState::SPOOLING_DOWN:
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, output_to_pwm(thrust_to_actuator(_thrust_left)));
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, output_to_pwm(thrust_to_actuator(_thrust_right)));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTailL, output_to_pwm(thrust_to_actuator(_thrust_taill)));
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTailR, output_to_pwm(thrust_to_actuator(_thrust_tailr)));
             break;
     }
 
     // 始终输出给倾转舵机 Always output to tilt servos
-    SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorLeft, _tilt_left*SERVO_OUTPUT_RANGE);
-    SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorRight, _tilt_right*SERVO_OUTPUT_RANGE);
-
+    SRV_Channels::set_output_scaled(SRV_Channel::k_tiltLeft, _tilt_left*SERVO_OUTPUT_RANGE);
+    SRV_Channels::set_output_scaled(SRV_Channel::k_tiltRight, _tilt_right*SERVO_OUTPUT_RANGE);
+    SRV_Channels::set_output_scaled(SRV_Channel::k_tiltTail, _tilt_tail*SERVO_OUTPUT_RANGE);
 }
 
 //  get_motor_mask - returns a bitmask of which outputs are being used for motors (1 means being used)
@@ -98,14 +114,15 @@ uint16_t AP_MotorsTailsitter::get_motor_mask()
     uint32_t motor_mask = 0;
     uint8_t chan;
     if (SRV_Channels::find_channel(SRV_Channel::k_throttleLeft, chan)) {
-        motor_mask |= 1U << chan;
-    }
+        motor_mask |= 1U << chan;    }
     if (SRV_Channels::find_channel(SRV_Channel::k_throttleRight, chan)) {
-        motor_mask |= 1U << chan;
-    }
+        motor_mask |= 1U << chan;    }
+    if (SRV_Channels::find_channel(SRV_Channel::k_throttleTailL, chan)) {
+        motor_mask |= 1U << chan;    }
+    if (SRV_Channels::find_channel(SRV_Channel::k_throttleTailR, chan)) {
+        motor_mask |= 1U << chan;    }
 
-    // add parent's mask
-    motor_mask |= AP_MotorsMulticopter::get_motor_mask();
+    motor_mask |= AP_MotorsMulticopter::get_motor_mask(); // add parent's mask
 
     return motor_mask;
 }
@@ -138,8 +155,10 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     }
 
     // 这里是关键的控制分配方法 calculate left and right throttle outputs
-    _thrust_left  = throttle_thrust + roll_thrust * 0.5f;
-    _thrust_right = throttle_thrust - roll_thrust * 0.5f;
+    _thrust_left  = throttle_thrust + roll_thrust * 0.5f + pitch_thrust * 0.5f;
+    _thrust_right = throttle_thrust - roll_thrust * 0.5f + pitch_thrust * 0.5f;
+    _thrust_taill = throttle_thrust - pitch_thrust * 0.5f;
+    _thrust_tailr = throttle_thrust - pitch_thrust * 0.5f;
 
     // 如果最大推力大于1，则降低平均油门 if max thrust is more than one, reduce average throttle
     thrust_max = MAX(_thrust_right,_thrust_left);
@@ -154,45 +173,51 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     // 增加调整以减少平均油门 Add adjustment to reduce average throttle
     _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
     _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
+    _thrust_taill  = constrain_float(_thrust_taill  + thr_adj, 0.0f, 1.0f);
+    _thrust_tailr = constrain_float(_thrust_tailr + thr_adj, 0.0f, 1.0f);
     _throttle = throttle_thrust + thr_adj;
     // 补偿增益永远不会为零 compensation_gain can never be zero
     _throttle_out = _throttle / compensation_gain;
 
     // thrust vectoring
-    _tilt_left  = pitch_thrust - yaw_thrust;
-    _tilt_right = pitch_thrust + yaw_thrust;
+    _tilt_left  = pitch_thrust* 0.5f - yaw_thrust;
+    _tilt_right = pitch_thrust* 0.5f + yaw_thrust;
+    _tilt_tail =  pitch_thrust* 0.5f;
 }
 
-// output_test_seq - spin a motor at the pwm value specified
+//  output_test_seq - spin a motor at the pwm value specified
 //  motor_seq is the motor's sequence number from 1 to the number of motors on the frame
 //  pwm value is an actual pwm value that will be output, normally in the range of 1000 ~ 2000
 void AP_MotorsTailsitter::output_test_seq(uint8_t motor_seq, int16_t pwm)
 {
     // exit immediately if not armed
     if (!armed()) {
-        return;
-    }
+        return;    }
 
     // output to motors and servos
     switch (motor_seq) {
         case 1:
-            // right throttle
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, pwm);
-            break;
-        case 2:
-            // right tilt servo
-            SRV_Channels::set_output_pwm(SRV_Channel::k_tiltMotorRight, pwm);
-            break;
-        case 3:
-            // left throttle
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, pwm);
             break;
+        case 2:
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, pwm);
+            break;
+        case 3:
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTailL, pwm);
+            break;
         case 4:
-            // left tilt servo
-            SRV_Channels::set_output_pwm(SRV_Channel::k_tiltMotorLeft, pwm);
+            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTailR, pwm);
+            break;
+        case 5:
+            SRV_Channels::set_output_pwm(SRV_Channel::k_tiltLeft, pwm);
+            break;
+        case 6:
+            SRV_Channels::set_output_pwm(SRV_Channel::k_tiltRight, pwm);
+            break;
+        case 7:
+            SRV_Channels::set_output_pwm(SRV_Channel::k_tiltTail, pwm);
             break;
         default:
-            // do nothing
             break;
     }
 }

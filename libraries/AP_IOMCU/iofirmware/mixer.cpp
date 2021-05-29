@@ -1,18 +1,4 @@
 /*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-/*
   mixer for failsafe operation when FMU is dead
  */
 
@@ -179,6 +165,8 @@ void AP_IOMCU_FW::run_mixer(void)
         case SRV_Channel::k_throttle:
         case SRV_Channel::k_throttleLeft:
         case SRV_Channel::k_throttleRight:
+        case SRV_Channel::k_throttleTailL:
+        case SRV_Channel::k_throttleTailR:
             if (mixing.throttle_is_angle) {
                 pwm = mix_output_angle(i, throttle);
             } else {
