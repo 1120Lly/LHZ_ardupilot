@@ -73,12 +73,14 @@ void AP_Motors::set_desired_spool_state(DesiredSpoolState spool)
 };
 
 // pilot input in the -1 ~ +1 range for roll, pitch and yaw. 0~1 range for throttle
-void AP_Motors::set_radio_passthrough(float roll_input, float pitch_input, float throttle_input, float yaw_input)
+void AP_Motors::set_radio_passthrough(float roll_input, float pitch_input, float throttle_input, float yaw_input, float rotate_input)
 {
     _roll_radio_passthrough = roll_input;
     _pitch_radio_passthrough = pitch_input;
     _throttle_radio_passthrough = throttle_input;
     _yaw_radio_passthrough = yaw_input;
+    _rotate_radio_passthrough = rotate_input;
+
 }
 
 /*

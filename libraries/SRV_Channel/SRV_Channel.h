@@ -161,15 +161,6 @@ public:
         k_tiltLeft              = 135,
         k_tiltRight             = 136,
         k_tiltTail              = 137,
-
-        // k_motor1 throttleLeft  左电机
-        // k_motor2 throttleRight 右电机
-        // k_motor3 throttleTailL 尾左电机
-        // k_motor4 throttleTailR 尾左电机
-        // k_motor5 tiltLeft      左倾转
-        // k_motor6 tiltRight     右倾转
-        // k_motor7 tiltTail      尾倾转
-
         k_nr_aux_servo_functions         ///< This must be the last enum value (only add new values _before_ this one)
 
     } Aux_servo_function_t;

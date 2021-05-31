@@ -260,8 +260,7 @@ int16_t RC_Channel::get_control_in_zero_dz(void) const
     return pwm_to_angle_dz(0);
 }
 
-// ------------------------------------------
-
+// 将遥控器输入规范化或归一化
 float RC_Channel::norm_input() const
 {
     float ret;

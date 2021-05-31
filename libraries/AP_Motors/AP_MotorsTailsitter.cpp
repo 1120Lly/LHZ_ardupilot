@@ -4,9 +4,9 @@
 #include <AP_Math/AP_Math.h>
 #include "AP_MotorsTailsitter.h"
 #include <GCS_MAVLink/GCS.h>
+#include "AP_Motors_Class.h"
 
 extern const AP_HAL::HAL& hal;
-
 #define SERVO_OUTPUT_RANGE  4500
 
 // init
@@ -15,23 +15,23 @@ void AP_MotorsTailsitter::init(motor_frame_class frame_class, motor_frame_type f
     // 设置默认的电机和伺服映射 setup default motor and servo mappings
     uint8_t chan;
 
-    // k_motor1 throttleLeft  左电机
-    // k_motor2 throttleRight 右电机
-    // k_motor3 throttleTailL 尾左电机
-    // k_motor4 throttleTailR 尾左电机
-    // k_motor5 tiltLeft      左倾转
-    // k_motor6 tiltRight     右倾转
-    // k_motor7 tiltTail      尾倾转
+    // k_motor1 throttleLeft  左电机   73 1
+    // k_motor2 throttleRight 右电机   74 3
+    // k_motor3 throttleTailL 尾左电机 133 2
+    // k_motor4 throttleTailR 尾左电机 134 4
+    // k_motor5 tiltLeft      左倾转   135
+    // k_motor6 tiltRight     右倾转   136
+    // k_motor7 tiltTail      尾倾转   137
 
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleLeft, CH_1);
     if (SRV_Channels::find_channel(SRV_Channel::k_throttleLeft, chan)) {
         motor_enabled[chan] = true;    }
 
-    SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleRight, CH_2);
+    SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleRight, CH_3);
     if (SRV_Channels::find_channel(SRV_Channel::k_throttleRight, chan)) {
         motor_enabled[chan] = true;    }
 
-    SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleTailL, CH_3);
+    SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleTailL, CH_2);
     if (SRV_Channels::find_channel(SRV_Channel::k_throttleTailL, chan)) {
         motor_enabled[chan] = true;    }
 
@@ -55,15 +55,12 @@ void AP_MotorsTailsitter::init(motor_frame_class frame_class, motor_frame_type f
 // 申请线程，以一定频率调用 Constructor
 AP_MotorsTailsitter::AP_MotorsTailsitter(uint16_t loop_rate, uint16_t speed_hz) :
     AP_MotorsMulticopter(loop_rate, speed_hz)
-{
-    set_update_rate(speed_hz);
-}
+    {    set_update_rate(speed_hz);    }
 
 // 设定电机的更新频率，舵机不用 set update rate to motors - a value in hertz
 void AP_MotorsTailsitter::set_update_rate(uint16_t speed_hz)
 {
     _speed_hz = speed_hz;  // record requested speed
-
     SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleLeft, speed_hz);
     SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleRight, speed_hz);
     SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleTailL, speed_hz);
@@ -74,8 +71,7 @@ void AP_MotorsTailsitter::set_update_rate(uint16_t speed_hz)
 void AP_MotorsTailsitter::output_to_motors()
 {
     if (!_flags.initialised_ok) {
-        return;
-    }
+        return;    }
 
     switch (_spool_state) {
         case SpoolState::SHUT_DOWN: // 关机
@@ -121,7 +117,6 @@ uint16_t AP_MotorsTailsitter::get_motor_mask()
         motor_mask |= 1U << chan;    }
     if (SRV_Channels::find_channel(SRV_Channel::k_throttleTailR, chan)) {
         motor_mask |= 1U << chan;    }
-
     motor_mask |= AP_MotorsMulticopter::get_motor_mask(); // add parent's mask
 
     return motor_mask;
@@ -136,6 +131,7 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     float   throttle_thrust;            // throttle thrust input value, 0.0 - 1.0
     float   thrust_max;                 // highest motor value
     float   thr_adj = 0.0f;             // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
+    float   rotate_angle;
 
     // 应用电压和气压补偿 apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
@@ -143,22 +139,27 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     pitch_thrust = (_pitch_in + _pitch_in_ff) * compensation_gain;
     yaw_thrust = (_yaw_in + _yaw_in_ff) * compensation_gain;
     throttle_thrust = get_throttle() * compensation_gain;
+    rotate_angle= _rotate_radio_passthrough;
 
     // 正常检查油门高于零，低于当前限制油门 sanity check throttle is above zero and below current limited throttle
     if (throttle_thrust <= 0.0f) {
         throttle_thrust = 0.0f;
-        limit.throttle_lower = true;
-    }
+        limit.throttle_lower = true;    }
     if (throttle_thrust >= _throttle_thrust_max) {
         throttle_thrust = _throttle_thrust_max;
-        limit.throttle_upper = true;
-    }
+        limit.throttle_upper = true;    }
 
     // 这里是关键的控制分配方法 calculate left and right throttle outputs
     _thrust_left  = throttle_thrust + roll_thrust * 0.5f + pitch_thrust * 0.5f;
     _thrust_right = throttle_thrust - roll_thrust * 0.5f + pitch_thrust * 0.5f;
     _thrust_taill = throttle_thrust - pitch_thrust * 0.5f;
     _thrust_tailr = throttle_thrust - pitch_thrust * 0.5f;
+    _tilt_left    = yaw_thrust - rotate_angle* 0.5f;
+    _tilt_right   = yaw_thrust + rotate_angle* 0.5f;
+    _tilt_tail    = rotate_angle* 0.5f;
+    //_tilt_left  = pitch_thrust* 0.5f - yaw_thrust;
+    //_tilt_right = pitch_thrust* 0.5f + yaw_thrust;
+    //_tilt_tail  = pitch_thrust* 0.5f;
 
     // 如果最大推力大于1，则降低平均油门 if max thrust is more than one, reduce average throttle
     thrust_max = MAX(_thrust_right,_thrust_left);
@@ -166,23 +167,15 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
         thr_adj = 1.0f - thrust_max;
         limit.throttle_upper = true;
         limit.roll = true;
-        limit.pitch = true;
-    }
+        limit.pitch = true;    }
 
-    // 下面这些内容还不是很理解
     // 增加调整以减少平均油门 Add adjustment to reduce average throttle
     _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
     _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
     _thrust_taill  = constrain_float(_thrust_taill  + thr_adj, 0.0f, 1.0f);
     _thrust_tailr = constrain_float(_thrust_tailr + thr_adj, 0.0f, 1.0f);
     _throttle = throttle_thrust + thr_adj;
-    // 补偿增益永远不会为零 compensation_gain can never be zero
-    _throttle_out = _throttle / compensation_gain;
-
-    // thrust vectoring
-    _tilt_left  = pitch_thrust* 0.5f - yaw_thrust;
-    _tilt_right = pitch_thrust* 0.5f + yaw_thrust;
-    _tilt_tail =  pitch_thrust* 0.5f;
+    _throttle_out = _throttle / compensation_gain; // 补偿增益永远不会为零 compensation_gain can never be zero
 }
 
 //  output_test_seq - spin a motor at the pwm value specified
