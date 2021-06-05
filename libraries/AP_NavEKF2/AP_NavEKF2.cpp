@@ -624,17 +624,17 @@ bool NavEKF2::InitialiseFilter(void)
     if (_enable == 0) {
         return false;
     }
-    const AP_InertialSensor &ins = AP::ins();
+    const AP_InertialSensor &ins = AP::ins(); // 获取传感器，GYRO，ACC数据
 
-    imuSampleTime_us = AP_HAL::micros64();
+    imuSampleTime_us = AP_HAL::micros64();    // 获取IMU采样时间
 
-    // remember expected frame time
+    // 记录预期时间 remember expected frame time
     _frameTimeUsec = 1e6 / ins.get_sample_rate();
 
-    // expected number of IMU frames per prediction
+    // 计算有多少个预测IMU方程 expected number of IMU frames per prediction
     _framesPerPrediction = uint8_t((EKF_TARGET_DT / (_frameTimeUsec * 1.0e-6) + 0.5));
 
-    // see if we will be doing logging
+    // 看我们是否会做日志记录 see if we will be doing logging
     AP_Logger *logger = AP_Logger::get_singleton();
     if (logger != nullptr) {
         logging.enabled = logger->log_replay();
@@ -654,7 +654,7 @@ bool NavEKF2::InitialiseFilter(void)
             }
         }
 
-        // check if there is enough memory to create the EKF cores
+        // 检查是否有足够的内存来创建EKF内核 check if there is enough memory to create the EKF cores
         if (hal.util->available_memory() < sizeof(NavEKF2_core)*num_cores + 4096) {
             gcs().send_text(MAV_SEVERITY_CRITICAL, "NavEKF2: not enough memory");
             _enable.set(0);
@@ -669,20 +669,17 @@ bool NavEKF2::InitialiseFilter(void)
             return false;
         }
 
-        //Call Constructors on all cores
+        // Call Constructors on all cores
         for (uint8_t i = 0; i < num_cores; i++) {
-            new (&core[i]) NavEKF2_core(this);
-        }
+            new (&core[i]) NavEKF2_core(this);  } // 重点函数，创建对象，用来做EKF2运算，看需要创建几个IMU对象
 
         // set the IMU index for the cores
         num_cores = 0;
         for (uint8_t i=0; i<7; i++) {
             if (_imuMask & (1U<<i)) {
                 if(!core[num_cores].setup_core(i, num_cores)) {
-                    return false;
-                }
-                num_cores++;
-            }
+                    return false;   }
+                num_cores++;        }
         }
 
         // Set the primary initially to be the lowest index
@@ -696,7 +693,7 @@ bool NavEKF2::InitialiseFilter(void)
     // initialise successfully
     bool ret = true;
     for (uint8_t i=0; i<num_cores; i++) {
-        ret &= core[i].InitialiseFilterBootstrap();
+        ret &= core[i].InitialiseFilterBootstrap(); // 重点函数，初始化不同的IMU
     }
 
     // zero the structs used capture reset events

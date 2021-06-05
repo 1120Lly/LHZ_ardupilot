@@ -1,5 +1,3 @@
-// 你好！APM主函数
-// 2021年5月25日 12:14 学习代码写注释
 // ArduCopter (also known as APM, APM:Copter or just Copter)
 
 #include "Copter.h"
@@ -157,21 +155,16 @@ void Copter::loop()
     G_Dt = scheduler.get_last_loop_time_s();
 }
 
-
-// 主循环 Main loop - 400hz 快速
+// 主循环快速运行 Main loop - 400hz
 void Copter::fast_loop()
 {
-    // 先更新惯性导航 update INS immediately to get current gyro data populated
+    // 先更新惯性导航数据-------------- update INS immediately to get current gyro data populated
     ins.update();
-
-    // 再运行姿态控制器 run low level rate controllers that only require IMU data
+    // 再运行姿态角速度控制器---------- run low level rate controllers that only require IMU data
     attitude_control->rate_controller_run();
-
-    // send outputs to the motors library immediately
+    // 然后发送PWM到电机舵机----------- send outputs to the motors library immediately
     motors_output();
-
-    // run EKF state estimator (expensive)
-    // --------------------
+    // 接着运行EKF状态估计器----------- run EKF state estimator (expensive)
     read_AHRS();
 
 #if FRAME_CONFIG == HELI_FRAME
@@ -179,22 +172,17 @@ void Copter::fast_loop()
     #if MODE_AUTOROTATE_ENABLED == ENABLED
         heli_update_autorotation();
     #endif
-#endif //HELI_FRAME
+#endif //HELI_FRAME直升机类型不用管
 
-    // Inertial Nav
-    // --------------------
+    // 读取需要的惯性导航数据---------- Inertial Nav
     read_inertia();
-
-    // check if ekf has reset target heading or position
+    // 检查EKF是否重置机头和位置------- check if ekf has reset target heading or position
     check_ekf_reset();
-
-    // run the attitude controllers
-    update_flight_mode(); //更新飞行模式
-
-    // update home from EKF if necessary
+    // 更新各种飞行模式运行姿态控制器--- run the attitude controllers
+    update_flight_mode();
+    // 从EKF更新原点信息--------------- update home from EKF if necessary
     update_home_from_EKF();
-
-    // check if we've landed or crashed
+    // 着陆和坠毁检测------------------ check if we've landed or crashed
     update_land_and_crash_detectors();
 
 #if MOUNT == ENABLED
@@ -227,6 +215,9 @@ void Copter::throttle_loop()
 
     // check auto_armed status
     update_auto_armed();
+
+    // make it possible to change ahrs orientation at runtime during initial config
+    ahrs.update_orientation();
 
 #if FRAME_CONFIG == HELI_FRAME
     // update rotor speed
@@ -355,7 +346,6 @@ void Copter::three_hz_loop()
     fence_check();
 #endif // AC_FENCE_ENABLED
 
-
     // update ch6 in flight tuning
     tuning();
 }
@@ -371,7 +361,7 @@ void Copter::one_hz_loop()
 
     if (!motors->armed()) {
         // make it possible to change ahrs orientation at runtime during initial config
-        ahrs.update_orientation();
+        //ahrs.update_orientation();
 
         update_using_interlock();
 
@@ -501,6 +491,7 @@ void Copter::read_AHRS(void)
     gcs().update();
 #endif
 
+    // 告诉AHRS跳过INS更新，因为我们已经在fast_loop()中做过了
     // we tell AHRS to skip INS update as we have already done it in fast_loop()
     ahrs.update(true);
 }

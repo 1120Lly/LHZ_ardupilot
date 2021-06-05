@@ -1,19 +1,4 @@
-/*
-  APM_AHRS.cpp
-
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+//  航向姿态参考系统 APM_AHRS.cpp
 #include "AP_AHRS.h"
 #include "AP_AHRS_View.h"
 #include <AP_HAL/AP_HAL.h>
@@ -24,7 +9,7 @@
 
 extern const AP_HAL::HAL& hal;
 
-// table of user settable parameters
+//  用户可设置的参数列表 table of user settable parameters
 const AP_Param::GroupInfo AP_AHRS::var_info[] = {
     // index 0 and 1 are for old parameters that are no longer not used
 
@@ -53,7 +38,7 @@ const AP_Param::GroupInfo AP_AHRS::var_info[] = {
 
     // @Param: RP_P
     // @DisplayName: AHRS RP_P
-    // @Description: This controls how fast the accelerometers correct the attitude
+    // @Description: 加速度计修正姿态的速率 This controls how fast the accelerometers correct the attitude
     // @Range: 0.1 0.4
     // @Increment: .01
     // @User: Advanced
@@ -72,6 +57,7 @@ const AP_Param::GroupInfo AP_AHRS::var_info[] = {
 
     // @Param: TRIM_X
     // @DisplayName: AHRS Trim Roll
+    // 补偿控制板和机体之间的滚转角度差，正值使飞行器向右滚转。
     // @Description: Compensates for the roll angle difference between the control board and the frame. Positive values make the vehicle roll right.
     // @Units: rad
     // @Range: -0.1745 +0.1745
@@ -80,6 +66,7 @@ const AP_Param::GroupInfo AP_AHRS::var_info[] = {
 
     // @Param: TRIM_Y
     // @DisplayName: AHRS Trim Pitch
+    // 补偿控制板和机体之间的俯仰角度差，正值使飞行器抬头。
     // @Description: Compensates for the pitch angle difference between the control board and the frame. Positive values make the vehicle pitch up/back.
     // @Units: rad
     // @Range: -0.1745 +0.1745
@@ -88,15 +75,16 @@ const AP_Param::GroupInfo AP_AHRS::var_info[] = {
 
     // @Param: TRIM_Z
     // @DisplayName: AHRS Trim Yaw
-    // @Description: Not Used
+    // @Description: Not Used 航向补偿不需要使用
     // @Units: rad
     // @Range: -0.1745 +0.1745
     // @Increment: 0.01
     // @User: Advanced
-    AP_GROUPINFO("TRIM", 8, AP_AHRS, _trim, 0),
+    AP_GROUPINFO("TRIM", 8, AP_AHRS, _trim, 0), // trim:飞行器配平
 
     // @Param: ORIENTATION
     // @DisplayName: Board Orientation
+    // 整体板面朝向相对于标准板面朝向而言。这将旋转IMU和罗盘读数，以允许板在您的车辆在任何90或45度角。该选项在下次启动时生效。改变后，你需要重新升级你的车辆。
     // @Description: Overall board orientation relative to the standard orientation for the board type. This rotates the IMU and compass readings to allow the board to be oriented in your vehicle at any 90 or 45 degree angle. This option takes affect on next boot. After changing you will need to re-level your vehicle.
     // @Values: 0:None,1:Yaw45,2:Yaw90,3:Yaw135,4:Yaw180,5:Yaw225,6:Yaw270,7:Yaw315,8:Roll180,9:Roll180Yaw45,10:Roll180Yaw90,11:Roll180Yaw135,12:Pitch180,13:Roll180Yaw225,14:Roll180Yaw270,15:Roll180Yaw315,16:Roll90,17:Roll90Yaw45,18:Roll90Yaw90,19:Roll90Yaw135,20:Roll270,21:Roll270Yaw45,22:Roll270Yaw90,23:Roll270Yaw135,24:Pitch90,25:Pitch270,26:Pitch180Yaw90,27:Pitch180Yaw270,28:Roll90Pitch90,29:Roll180Pitch90,30:Roll270Pitch90,31:Roll90Pitch180,32:Roll270Pitch180,33:Roll90Pitch270,34:Roll180Pitch270,35:Roll270Pitch270,36:Roll90Pitch180Yaw90,37:Roll90Yaw270,38:Yaw293Pitch68Roll180,39:Pitch315,40:Roll90Pitch315,100:Custom
     // @User: Advanced
@@ -134,6 +122,7 @@ const AP_Param::GroupInfo AP_AHRS::var_info[] = {
 
     // @Param: CUSTOM_ROLL
     // @DisplayName: Board orientation roll offset
+    // 自动驾驶仪安装位置偏置。正值=向右滚动，负值=向左滚动。当“AHRS_ORIENTATION”设置为“CUSTOM”时，该参数才会使用。
     // @Description: Autopilot mounting position roll offset. Positive values = roll right, negative values = roll left. This parameter is only used when AHRS_ORIENTATION is set to CUSTOM.
     // @Range: -180 180
     // @Units: deg
@@ -143,6 +132,7 @@ const AP_Param::GroupInfo AP_AHRS::var_info[] = {
 
     // @Param: CUSTOM_PIT
     // @DisplayName: Board orientation pitch offset
+    // 自动驾驶仪安装位置螺距偏移。正值=俯仰向上，负值=俯仰向下。当“AHRS_ORIENTATION”设置为“CUSTOM”时，该参数才会使用。
     // @Description: Autopilot mounting position pitch offset. Positive values = pitch up, negative values = pitch down. This parameter is only used when AHRS_ORIENTATION is set to CUSTOM.
     // @Range: -180 180
     // @Units: deg
@@ -199,16 +189,16 @@ bool AP_AHRS::airspeed_estimate(float *airspeed_ret) const
     return false;
 }
 
-// set_trim
+// 设置配平 set_trim
 void AP_AHRS::set_trim(const Vector3f &new_trim)
 {
     Vector3f trim;
-    trim.x = constrain_float(new_trim.x, ToRad(-AP_AHRS_TRIM_LIMIT), ToRad(AP_AHRS_TRIM_LIMIT));
-    trim.y = constrain_float(new_trim.y, ToRad(-AP_AHRS_TRIM_LIMIT), ToRad(AP_AHRS_TRIM_LIMIT));
+    trim.x = constrain_float(new_trim.x, ToRad(-AP_AHRS_TRIM_LIMIT), ToRad(AP_AHRS_TRIM_LIMIT)); // 最大配平角度转弧度
+    trim.y = constrain_float(new_trim.y, ToRad(-AP_AHRS_TRIM_LIMIT), ToRad(AP_AHRS_TRIM_LIMIT)); // 最大配平角度转弧度
     _trim.set_and_save(trim);
 }
 
-// add_trim - adjust the roll and pitch trim up to a total of 10 degrees
+// 在10度之内调整配平 add_trim: adjust the roll and pitch trim up to a total of 10 degrees
 void AP_AHRS::add_trim(float roll_in_radians, float pitch_in_radians, bool save_to_eeprom)
 {
     Vector3f trim = _trim.get();
@@ -222,25 +212,28 @@ void AP_AHRS::add_trim(float roll_in_radians, float pitch_in_radians, bool save_
 
     // save to eeprom
     if( save_to_eeprom ) {
-        _trim.save();
-    }
+        _trim.save();    }
 }
 
-// Set the board mounting orientation, may be called while disarmed
+// 这里是关键：更新飞控板安装旋转角
 void AP_AHRS::update_orientation()
 {
+    float board_rotate = RC_Channels::get_radio_in(CH_6);
+    board_rotate= (board_rotate -1500) *0.15; // 这里决定着倾斜角最大能转多少度
     const enum Rotation orientation = (enum Rotation)_board_orientation.get();
-    if (orientation != ROTATION_CUSTOM) {
+    if (orientation != ROTATION_CUSTOM)
+    {
         AP::ins().set_board_orientation(orientation);
         if (_compass != nullptr) {
-            _compass->set_board_orientation(orientation);
-        }
-    } else {
-        _custom_rotation.from_euler(radians(_custom_roll), radians(_custom_pitch), radians(_custom_yaw));
+               _compass->set_board_orientation(orientation);    }
+    }
+    else //自定义旋转，使用自定义俯仰角度
+    {
+        _custom_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
+        //_custom_rotation.from_euler(radians(_custom_roll), radians(_custom_pitch), radians(_custom_yaw));
         AP::ins().set_board_orientation(orientation, &_custom_rotation);
         if (_compass != nullptr) {
-            _compass->set_board_orientation(orientation, &_custom_rotation);
-        }
+            _compass->set_board_orientation(orientation, &_custom_rotation);     }
     }
 }
 

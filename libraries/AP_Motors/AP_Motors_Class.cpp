@@ -1,22 +1,5 @@
 /*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
- *       AP_Motors.cpp - ArduCopter motors library
- *       Code by RandyMackay. DIYDrones.com
- *
+ *    AP_Motors.cpp - ArduCopter motors library
  */
 
 #include "AP_Motors_Class.h"
@@ -80,7 +63,6 @@ void AP_Motors::set_radio_passthrough(float roll_input, float pitch_input, float
     _throttle_radio_passthrough = throttle_input;
     _yaw_radio_passthrough = yaw_input;
     _rotate_radio_passthrough = rotate_input;
-
 }
 
 /*

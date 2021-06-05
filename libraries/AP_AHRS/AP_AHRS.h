@@ -28,10 +28,11 @@
 #include <AP_InertialSensor/AP_InertialSensor.h>
 #include <AP_Param/AP_Param.h>
 #include <AP_Common/Location.h>
+#include <AP_Motors/AP_Motors_Class.h>
 
 class AP_NMEA_Output;
 class OpticalFlow;
-#define AP_AHRS_TRIM_LIMIT 10.0f        // maximum trim angle in degrees
+#define AP_AHRS_TRIM_LIMIT 10.0f        // 最大配平角度限制 maximum trim angle in degrees
 #define AP_AHRS_RP_P_MIN   0.05f        // minimum value for AHRS_RP_P parameter
 #define AP_AHRS_YAW_P_MIN  0.05f        // minimum value for AHRS_YAW_P parameter
 
@@ -160,7 +161,6 @@ public:
     // allow for runtime change of orientation
     // this makes initial config easier
     void update_orientation();
-
     void set_airspeed(AP_Airspeed *airspeed) {
         _airspeed = airspeed;
     }

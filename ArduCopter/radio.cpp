@@ -1,8 +1,5 @@
 #include "Copter.h"
-
-
 // Function that will read the radio data, limit servos and trigger a failsafe
-// ----------------------------------------------------------------------------
 
 void Copter::default_dead_zones()
 {
@@ -75,7 +72,6 @@ void Copter::init_rc_out()
     BoardConfig.set_default_safety_ignore_mask(safety_ignore_mask);
 #endif
 }
-
 
 // enable_motor_output() - enable and output lowest possible value to motors
 void Copter::enable_motor_output()

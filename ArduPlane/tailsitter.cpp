@@ -1,28 +1,13 @@
 /*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-/*
-  control code for tailsitters. Enabled by setting Q_FRAME_CLASS=10 
-  or by setting Q_TAILSIT_MOTMX nonzero and Q_FRAME_CLASS and Q_FRAME_TYPE
-  to a configuration supported by AP_MotorsMatrix
+  control code for tailsitters. Enabled by setting Q_FRAME_CLASS=10 or by setting Q_TAILSIT_MOTMX nonzero
+  and Q_FRAME_CLASS and Q_FRAME_TYPE to a configuration supported by AP_MotorsMatrix
  */
 
 #include "Plane.h"
 
-/*
-  return true when flying a tailsitter
- */
+
+//  return true when flying a tailsitter
+
 bool QuadPlane::is_tailsitter(void) const
 {
     return available() 
@@ -30,9 +15,7 @@ bool QuadPlane::is_tailsitter(void) const
         && (tilt.tilt_type != TILT_TYPE_BICOPTER);
 }
 
-/*
-  check if we are flying as a tailsitter
- */
+//  check if we are flying as a tailsitter
 bool QuadPlane::tailsitter_active(void)
 {
     if (!is_tailsitter()) {

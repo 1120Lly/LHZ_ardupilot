@@ -3,6 +3,8 @@
 /*
  * Function to update various parameters in flight using the ch6 tuning knob
  * This should not be confused with the AutoTune feature which can bve found in control_autotune.cpp
+ * 功能更新飞行中使用ch6调谐旋钮的各种参数
+ * 这不应该与AutoTune功能相混淆，这可以在control_autotune.cpp中找到
  */
 
 // tuning - updates parameters based on the ch6 tuning knob's position

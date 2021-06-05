@@ -232,7 +232,7 @@ void AP_Compass_Backend::set_rotation(uint8_t instance, enum Rotation rotation)
 {
     _compass._state[Compass::StateIndex(instance)].rotation = rotation;
 #if !APM_BUILD_TYPE(APM_BUILD_AP_Periph)
-    // lazily create the custom rotation matrix
+    // 延迟创建自定义旋转矩阵 lazily create the custom rotation matrix
     if (!_compass._custom_rotation && Rotation(_compass._state[Compass::StateIndex(instance)].orientation.get()) == ROTATION_CUSTOM) {
         _compass._custom_rotation = new Matrix3f();
         _compass._custom_rotation->from_euler(radians(_compass._custom_roll), radians(_compass._custom_pitch), radians(_compass._custom_yaw));

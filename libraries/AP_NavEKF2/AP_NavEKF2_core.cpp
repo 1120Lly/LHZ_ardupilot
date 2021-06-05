@@ -376,7 +376,7 @@ void NavEKF2_core::InitialiseVariablesMag()
 // This method can only be used when the vehicle is static
 bool NavEKF2_core::InitialiseFilterBootstrap(void)
 {
-    // If we are a plane and don't have GPS lock then don't initialise
+    // 如果我们是一架飞机，没有GPS锁定，那么就不要初始化 If we are a plane and don't have GPS lock then don't initialise
     if (assume_zero_sideslip() && AP::gps().status() < AP_GPS::GPS_OK_FIX_3D) {
         hal.util->snprintf(prearm_fail_string,
                            sizeof(prearm_fail_string),
@@ -392,16 +392,16 @@ bool NavEKF2_core::InitialiseFilterBootstrap(void)
         readIMUData();
         readMagData();
         readGpsData();
-        readBaroData();
+        readBaroData(); // 初始化气压计
         return storedIMU.is_filled();
     }
 
     // set re-used variables to zero
     InitialiseVariables();
 
-    const AP_InertialSensor &ins = AP::ins();
+    const AP_InertialSensor &ins = AP::ins(); // 获取INS数据
 
-    // Initialise IMU data
+    // 初始化IMU数据 Initialise IMU data
     dtIMUavg = ins.get_loop_delta_t();
     readIMUData();
     storedIMU.reset_history(imuDataNew);
@@ -563,28 +563,20 @@ void NavEKF2_core::UpdateFilter(bool predict)
     if (runUpdates) {
         // Predict states using IMU data from the delayed time horizon
         UpdateStrapdownEquationsNED();
-
         // Predict the covariance growth
         CovariancePrediction();
-
         // Update states using  magnetometer data
         SelectMagFusion();
-
         // Update states using GPS and altimeter data
         SelectVelPosFusion();
-
         // Update states using range beacon data
         SelectRngBcnFusion();
-
         // Update states using optical flow data
         SelectFlowFusion();
-
         // Update states using airspeed data
         SelectTasFusion();
-
         // Update states using sideslip constraint assumption for fly-forward vehicles
         SelectBetaFusion();
-
         // Update the filter status
         updateFilterStatus();
     }
@@ -606,27 +598,21 @@ void NavEKF2_core::UpdateFilter(bool predict)
     hal.scheduler->restore_interrupts(istate);
 #endif
 
-    /*
-      this is a check to cope with a vehicle sitting idle on the
-      ground and getting over-confident of the state. The symptoms
-      would be "gyros still settling" when the user tries to arm. In
-      that state the EKF can't recover, so we do a hard reset and let
-      it try again.
-     */
+    // 这是一种应对闲置在地面上的车辆和对政府过度自信的检查。当用户试图解锁时，症状表现可能
+    // 是“陀螺仪仍然稳定”。在这种状态下，EKF无法恢复，所以我们做一个强制重置，让它再试一次。
+    // this is a check to cope with a vehicle sitting idle(闲置) on the ground and getting over-confident of the state. The symptoms
+    // would be "gyros still settling" when the user tries to arm. In that state the EKF can't recover, so we do a hard reset and let it try again.
     if (filterStatus.value != 0) {
-        last_filter_ok_ms = AP_HAL::millis();
-    }
-    if (filterStatus.value == 0 &&
-        last_filter_ok_ms != 0 &&
-        AP_HAL::millis() - last_filter_ok_ms > 5000 &&
-        !hal.util->get_soft_armed()) {
-        // we've been unhealthy for 5 seconds after being healthy, reset the filter
+        last_filter_ok_ms = AP_HAL::millis();    }
+
+    // 解锁前不要旋转变姿，否则会导致EKF强制重置，EKF关系到的内容太多，为了飞行安全，不能关闭这一重置机制
+    // 出现问题持续2秒，重置滤波器 we've been unhealthy for 2 seconds after being healthy, reset the filter
+    if (filterStatus.value == 0  &&  last_filter_ok_ms != 0 &&
+        AP_HAL::millis() - last_filter_ok_ms > 2000  &&  !hal.util->get_soft_armed())    {
         gcs().send_text(MAV_SEVERITY_WARNING, "EKF2 IMU%u forced reset",(unsigned)imu_index);
         last_filter_ok_ms = 0;
         statesInitialised = false;
-        InitialiseFilterBootstrap();
-    }
-    
+        InitialiseFilterBootstrap();    }
 }
 
 void NavEKF2_core::correctDeltaAngle(Vector3f &delAng, float delAngDT, uint8_t gyro_index)

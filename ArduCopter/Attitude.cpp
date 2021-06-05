@@ -59,7 +59,7 @@ void Copter::update_throttle_hover()
     // calc average throttle if we are in a level hover.  accounts for heli hover roll trim
     if (throttle > 0.0f && fabsf(inertial_nav.get_velocity_z()) < 60 &&
         labs(ahrs.roll_sensor-attitude_control->get_roll_trim_cd()) < 500 && labs(ahrs.pitch_sensor) < 500) {
-        // Can we set the time constant automatically
+        // 我们能自动设定时间常数吗 Can we set the time constant automatically
         motors->update_throttle_hover(0.01f);
     }
 }

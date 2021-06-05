@@ -25,6 +25,7 @@
 // motor update rate
 #define AP_MOTORS_SPEED_DEFAULT     490 // default output rate to the motors
 
+
 /// @class      AP_Motors
 class AP_Motors {
 public:
@@ -61,6 +62,8 @@ public:
         MOTOR_FRAME_TYPE_I = 15, // (sideways H) octo only
         MOTOR_FRAME_TYPE_BF_X_REV = 18, // X frame, betaflight ordering, reversed motors
     };
+
+
 
     // Constructor
     AP_Motors(uint16_t loop_rate, uint16_t speed_hz = AP_MOTORS_SPEED_DEFAULT);

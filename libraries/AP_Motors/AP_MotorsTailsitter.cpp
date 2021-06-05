@@ -125,23 +125,31 @@ uint16_t AP_MotorsTailsitter::get_motor_mask()
 // 关键步骤：计算电机输出 calculate outputs to the motors
 void AP_MotorsTailsitter::output_armed_stabilizing()
 {
-    float   roll_thrust;                // roll thrust input value, +/- 1.0
-    float   pitch_thrust;               // pitch thrust input value, +/- 1.0
-    float   yaw_thrust;                 // yaw thrust input value, +/- 1.0
-    float   throttle_thrust;            // throttle thrust input value, 0.0 - 1.0
-    float   thrust_max;                 // highest motor value
-    float   thr_adj = 0.0f;             // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
-    float   rotate_angle;
+    float   roll_thrust;         // roll thrust input value, +/- 1.0
+    float   pitch_thrust;        // pitch thrust input value, +/- 1.0
+    float   yaw_thrust;          // yaw thrust input value, +/- 1.0
+    float   throttle_thrust;     // throttle thrust input value, 0.0 - 1.0
+    float   thrust_max;          // highest motor value
+    float   thr_adj = 0.0f;      // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
+    float   rotate_angle;        // 旋转角输入值，最左为0，最右为1
+    float   rate;                // 舵机俯仰控制权重，水平为0，朝下为1，朝上为-1
+    float   t_rate;              // 电机俯仰控制权重，水平为1，朝下为0，朝上为0
 
-    // 应用电压和气压补偿 apply voltage and air pressure compensation
+    // 电压和气压补偿 apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
     roll_thrust = (_roll_in + _roll_in_ff) * compensation_gain;
     pitch_thrust = (_pitch_in + _pitch_in_ff) * compensation_gain;
     yaw_thrust = (_yaw_in + _yaw_in_ff) * compensation_gain;
     throttle_thrust = get_throttle() * compensation_gain;
-    rotate_angle= _rotate_radio_passthrough;
 
-    // 正常检查油门高于零，低于当前限制油门 sanity check throttle is above zero and below current limited throttle
+    // 旋转角与俯仰控制权重
+    rotate_angle= _rotate_radio_passthrough *2.0f - 1.0f;
+    rate = rotate_angle;
+    // 电机俯仰控制权重恒正
+    if (rate >= 0.0f) { t_rate= 1.0f -rate; }
+    if (rate <  0.0f) { t_rate= 1.0f +rate; }
+
+    // 安全检查，油门应当高于零，低于当前限制油门 sanity check throttle is above zero and below current limited throttle
     if (throttle_thrust <= 0.0f) {
         throttle_thrust = 0.0f;
         limit.throttle_lower = true;    }
@@ -149,17 +157,21 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
         throttle_thrust = _throttle_thrust_max;
         limit.throttle_upper = true;    }
 
-    // 这里是关键的控制分配方法 calculate left and right throttle outputs
-    _thrust_left  = throttle_thrust + roll_thrust * 0.5f + pitch_thrust * 0.5f;
-    _thrust_right = throttle_thrust - roll_thrust * 0.5f + pitch_thrust * 0.5f;
-    _thrust_taill = throttle_thrust - pitch_thrust * 0.5f;
-    _thrust_tailr = throttle_thrust - pitch_thrust * 0.5f;
-    _tilt_left    = yaw_thrust - rotate_angle* 0.5f;
-    _tilt_right   = yaw_thrust + rotate_angle* 0.5f;
-    _tilt_tail    = rotate_angle* 0.5f;
-    //_tilt_left  = pitch_thrust* 0.5f - yaw_thrust;
-    //_tilt_right = pitch_thrust* 0.5f + yaw_thrust;
-    //_tilt_tail  = pitch_thrust* 0.5f;
+    // 电机控制分配 calculate left and right throttle outputs
+    _thrust_left  =  throttle_thrust - t_rate *pitch_thrust *0.5f - roll_thrust *0.5f;
+    _thrust_right =  throttle_thrust - t_rate *pitch_thrust *0.5f + roll_thrust *0.5f;
+    _thrust_taill =  throttle_thrust + t_rate *pitch_thrust *0.5f ;
+    _thrust_tailr =  throttle_thrust + t_rate *pitch_thrust *0.5f ;
+
+    // 舵机控制分配，向上和向下的俯仰控制参与者不同
+    if (rotate_angle >= 0.0f)  {
+        _tilt_left    = -rotate_angle *0.5f - yaw_thrust *0.4f;
+        _tilt_right   =  rotate_angle *0.5f - yaw_thrust *0.4f;
+        _tilt_tail    =  rotate_angle *0.5f - rate *pitch_thrust *0.4f; }
+    if (rotate_angle < 0.0f)   {
+        _tilt_left    = -rotate_angle *0.5f - rate *pitch_thrust *0.4f - yaw_thrust *0.4f;
+        _tilt_right   =  rotate_angle *0.5f + rate *pitch_thrust *0.4f - yaw_thrust *0.4f;
+        _tilt_tail    =  rotate_angle *0.5f ; }
 
     // 如果最大推力大于1，则降低平均油门 if max thrust is more than one, reduce average throttle
     thrust_max = MAX(_thrust_right,_thrust_left);
@@ -170,12 +182,13 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
         limit.pitch = true;    }
 
     // 增加调整以减少平均油门 Add adjustment to reduce average throttle
+    // 补偿增益永远不会为零 compensation_gain can never be zero
     _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
     _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
     _thrust_taill  = constrain_float(_thrust_taill  + thr_adj, 0.0f, 1.0f);
     _thrust_tailr = constrain_float(_thrust_tailr + thr_adj, 0.0f, 1.0f);
     _throttle = throttle_thrust + thr_adj;
-    _throttle_out = _throttle / compensation_gain; // 补偿增益永远不会为零 compensation_gain can never be zero
+    _throttle_out = _throttle / compensation_gain;
 }
 
 //  output_test_seq - spin a motor at the pwm value specified
