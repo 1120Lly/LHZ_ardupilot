@@ -1,24 +1,5 @@
 #pragma once
-
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
- *  AHRS View class - for creating a 2nd view of the vehicle attitude
- *
- */
+//  AHRS View class - for creating a 2nd view of the vehicle attitude
 
 #include "AP_AHRS.h"
 
@@ -34,31 +15,24 @@ public:
     // empty virtual destructor
     virtual ~AP_AHRS_View() {}
 
+    // 姿态控制中主要调用此处陀螺仪数据，实际值在update中更新
     // return a smoothed and corrected gyro vector
-    const Vector3f &get_gyro(void) const {
-        return gyro;
-    }
+    const Vector3f &get_gyro(void) const  {  return gyro;  }
 
     // return a smoothed and corrected gyro vector using the latest ins data (which may not have been consumed by the EKF yet)
     Vector3f get_gyro_latest(void) const;
 
     // return a DCM rotation matrix representing our current attitude in this view
-    const Matrix3f &get_rotation_body_to_ned(void) const {
-        return rot_body_to_ned;
-    }
+    const Matrix3f &get_rotation_body_to_ned(void) const {  return rot_body_to_ned;  }
 
     // return a Quaternion representing our current attitude in this view
-    void get_quat_body_to_ned(Quaternion &quat) const {
-        quat.from_rotation_matrix(rot_body_to_ned);
-    }
+    void get_quat_body_to_ned(Quaternion &quat) const {  quat.from_rotation_matrix(rot_body_to_ned);  }
 
     // apply pitch trim
     void set_pitch_trim(float trim_deg);
 
     // helper trig value accessors
-    float cos_roll() const {
-        return trig.cos_roll;
-    }
+    float cos_roll() const {  return trig.cos_roll;  }
     float cos_pitch() const {
         return trig.cos_pitch;
     }
@@ -74,7 +48,6 @@ public:
     float sin_yaw() const {
         return trig.sin_yaw;
     }
-
 
     /*
       wrappers around ahrs functions which pass-thru directly. See

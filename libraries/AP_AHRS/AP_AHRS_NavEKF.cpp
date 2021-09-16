@@ -45,16 +45,14 @@ const Matrix3f &AP_AHRS_NavEKF::get_rotation_body_to_ned(void) const
     return _dcm_matrix;
 }
 
-const Vector3f &AP_AHRS_NavEKF::get_gyro_drift(void) const
+const Vector3f &AP_AHRS_NavEKF::get_gyro_drift(void) const // 获取陀螺仪漂移
 {
-    if (!active_EKF_type()) {
-        return AP_AHRS_DCM::get_gyro_drift();
-    }
+    if (!active_EKF_type()) {  return AP_AHRS_DCM::get_gyro_drift();  }
     return _gyro_drift;
 }
 
-// reset the current gyro drift estimate
-//  should be called if gyro offsets are recalculated
+// 重置当前陀螺仪漂移估计值 reset the current gyro drift estimate
+// should be called if gyro offsets are recalculated
 void AP_AHRS_NavEKF::reset_gyro_drift(void)
 {
     // support locked access functions to AHRS data
@@ -104,7 +102,7 @@ void AP_AHRS_NavEKF::update(bool skip_ins_update)
     AP_Module::call_hook_AHRS_update(*this);
 #endif
 
-    // push gyros if optical flow present
+    // 如果现有光流就推送陀螺仪数据 push gyros if optical flow present
     if (hal.opticalflow) {
         const Vector3f &exported_gyro_bias = get_gyro_drift();
         hal.opticalflow->push_gyro_bias(exported_gyro_bias.x, exported_gyro_bias.y);
@@ -169,13 +167,13 @@ void AP_AHRS_NavEKF::update_EKF2(void)
 
             const AP_InertialSensor &_ins = AP::ins();
 
-            // get gyro bias for primary EKF and change sign to give gyro drift
-            // Note sign convention used by EKF is bias = measurement - truth
+            // 获得主EKF的陀螺仪偏移，并改变符号以给出陀螺仪漂移 get gyro bias for primary EKF and change sign to give gyro drift
+            // EKF使用的注释符号惯例是Note sign convention used by EKF is bias = measurement - truth
             _gyro_drift.zero();
             EKF2.getGyroBias(-1,_gyro_drift);
             _gyro_drift = -_gyro_drift;
 
-            // calculate corrected gyro estimate for get_gyro()
+            // 计算get_gyro()的校正陀螺仪估计值 calculate corrected gyro estimate for get_gyro()
             _gyro_estimate.zero();
             if (primary_imu == -1 || !_ins.get_gyro_health(primary_imu)) {
                 // the primary IMU is undefined so use an uncorrected default value from the INS library
@@ -248,13 +246,13 @@ void AP_AHRS_NavEKF::update_EKF3(void)
             EKF3.getGyroBias(-1,_gyro_drift);
             _gyro_drift = -_gyro_drift;
 
-            // calculate corrected gyro estimate for get_gyro()
+            // 计算get_gyro()的校正陀螺估计值 calculate corrected gyro estimate for get_gyro()
             _gyro_estimate.zero();
             if (primary_imu == -1 || !_ins.get_gyro_health(primary_imu)) {
                 // the primary IMU is undefined so use an uncorrected default value from the INS library
                 _gyro_estimate = _ins.get_gyro();
             } else {
-                // use the same IMU as the primary EKF and correct for gyro drift
+                // 使用与主EKF相同的IMU来校正陀螺漂移 use the same IMU as the primary EKF and correct for gyro drift
                 _gyro_estimate = _ins.get_gyro(primary_imu) + _gyro_drift;
             }
 

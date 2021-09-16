@@ -1,26 +1,8 @@
-/*
- * quaternion.cpp
- * Copyright (C) Andrew Tridgell 2012
- *
- * This file is free software: you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This file is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
+// 四元数
 #pragma GCC optimize("O2")
-
 #include "AP_Math.h"
 
-// return the rotation matrix equivalent for this quaternion
+// 返回等价于这个四元数的旋转矩阵 return the rotation matrix equivalent for this quaternion
 void Quaternion::rotation_matrix(Matrix3f &m) const
 {
     const float q3q3 = q3 * q3;
@@ -44,7 +26,7 @@ void Quaternion::rotation_matrix(Matrix3f &m) const
     m.c.z = 1.0f-2.0f*(q2q2 + q3q3);
 }
 
-// return the rotation matrix equivalent for this quaternion after normalization
+// 在归一化后返回等价于这个四元数的旋转矩阵 return the rotation matrix equivalent for this quaternion after normalization
 void Quaternion::rotation_matrix_norm(Matrix3f &m) const
 {
     const float q1q1 = q1 * q1;
@@ -250,25 +232,17 @@ void Quaternion::rotate_fast(const Vector3f &v)
     q4 = w1*z2 + x1*y2 - y1*x2 + z1*w2;
 }
 
-// get euler roll angle
+// 由四元数得到滚转欧拉角 get euler roll angle
 float Quaternion::get_euler_roll() const
-{
-    return (atan2f(2.0f*(q1*q2 + q3*q4), 1.0f - 2.0f*(q2*q2 + q3*q3)));
-}
-
-// get euler pitch angle
+{   return (atan2f(2.0f*(q1*q2 + q3*q4), 1.0f - 2.0f*(q2*q2 + q3*q3)));   }
+// 由四元数得到俯仰欧拉角 get euler pitch angle
 float Quaternion::get_euler_pitch() const
-{
-    return safe_asin(2.0f*(q1*q3 - q4*q2));
-}
-
-// get euler yaw angle
+{   return safe_asin(2.0f*(q1*q3 - q4*q2));                               }
+// 由四元数得到偏航欧拉角 get euler yaw angle
 float Quaternion::get_euler_yaw() const
-{
-    return atan2f(2.0f*(q1*q4 + q2*q3), 1.0f - 2.0f*(q3*q3 + q4*q4));
-}
+{   return atan2f(2.0f*(q1*q4 + q2*q3), 1.0f - 2.0f*(q3*q3 + q4*q4));     }
 
-// create eulers from a quaternion
+// 创建由四元数得到的欧拉角 create eulers from a quaternion
 void Quaternion::to_euler(float &roll, float &pitch, float &yaw) const
 {
     roll = get_euler_roll();

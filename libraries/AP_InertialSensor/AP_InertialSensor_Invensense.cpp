@@ -352,17 +352,12 @@ void AP_InertialSensor_Invensense::start()
     _dev->register_periodic_callback(1000000UL / _backend_rate_hz, FUNCTOR_BIND_MEMBER(&AP_InertialSensor_Invensense::_poll_data, void));
 }
 
-
-/*
-  publish any pending data
- */
+// 发布任何等待判定的数据 publish any pending data
 bool AP_InertialSensor_Invensense::update()
 {
-    update_accel(_accel_instance);
-    update_gyro(_gyro_instance);
-
-    _publish_temperature(_accel_instance, _temp_filtered);
-
+    update_accel(_accel_instance);                          // 更新加速度数据
+    update_gyro(_gyro_instance);                            // 更新陀螺仪数据
+    _publish_temperature(_accel_instance, _temp_filtered);  // 发布温度数据
     return true;
 }
 
@@ -410,6 +405,7 @@ void AP_InertialSensor_Invensense::_poll_data()
     _read_fifo();
 }
 
+// imu数据更新，计算加速度数据，accumulate意思是积累
 bool AP_InertialSensor_Invensense::_accumulate(uint8_t *samples, uint8_t n_samples)
 {
     for (uint8_t i = 0; i < n_samples; i++) {
@@ -421,31 +417,26 @@ bool AP_InertialSensor_Invensense::_accumulate(uint8_t *samples, uint8_t n_sampl
         fsync_set = (int16_val(data, 2) & 1U) != 0;
 #endif
         
-        accel = Vector3f(int16_val(data, 1),
-                         int16_val(data, 0),
-                         -int16_val(data, 2));
-        accel *= _accel_scale;
+        accel = Vector3f( int16_val(data, 1), int16_val(data, 0), -int16_val(data, 2) ); // 加速度原始数据
+        accel *= _accel_scale;                              // 单位转换为G
 
         int16_t t2 = int16_val(data, 3);
         if (!_check_raw_temp(t2)) {
-            if (!hal.scheduler->in_expected_delay()) {
-                debug("temp reset IMU[%u] %d %d", _accel_instance, _raw_temp, t2);
-            }
+            if (!hal.scheduler->in_expected_delay())
+            {  debug("temp reset IMU[%u] %d %d", _accel_instance, _raw_temp, t2);  }
             _fifo_reset();
             return false;
         }
         float temp = t2 * temp_sensitivity + temp_zero;
         
-        gyro = Vector3f(int16_val(data, 5),
-                        int16_val(data, 4),
-                        -int16_val(data, 6));
-        gyro *= _gyro_scale;
+        gyro = Vector3f( int16_val(data, 5), int16_val(data, 4), -int16_val(data, 6) ); // 陀螺仪原始数据
+        gyro *= _gyro_scale;                                // 单位转换为弧度
 
-        _rotate_and_correct_accel(_accel_instance, accel);
-        _rotate_and_correct_gyro(_gyro_instance, gyro);
+        _rotate_and_correct_accel(_accel_instance, accel);  // 把加速度数据转换成重力加速度数据，坐标是NED
+        _rotate_and_correct_gyro(_gyro_instance, gyro);     // 获取陀螺仪旋转后的数据
 
         _notify_new_accel_raw_sample(_accel_instance, accel, 0, fsync_set);
-        _notify_new_gyro_raw_sample(_gyro_instance, gyro);
+        _notify_new_gyro_raw_sample(_gyro_instance, gyro);  // 发布数据
 
         _temp_filtered = _temp_filter.apply(temp);
     }
@@ -536,7 +527,7 @@ bool AP_InertialSensor_Invensense::_accumulate_sensor_rate_sampling(uint8_t *sam
     return ret;
 }
 
-void AP_InertialSensor_Invensense::_read_fifo()
+void AP_InertialSensor_Invensense::_read_fifo() // imu数据的读取
 {
     uint8_t n_samples;
     uint16_t bytes_read;
@@ -609,7 +600,7 @@ void AP_InertialSensor_Invensense::_read_fifo()
                 break;
             }
         } else {
-            if (!_accumulate(rx, n)) {
+            if (!_accumulate(rx, n)) {     // 计算传感器数据
                 break;
             }
         }

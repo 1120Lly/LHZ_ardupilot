@@ -30,6 +30,7 @@
 class AP_Motors {
 public:
 
+
     enum motor_frame_class {
         MOTOR_FRAME_UNDEFINED = 0,
         MOTOR_FRAME_QUAD = 1,

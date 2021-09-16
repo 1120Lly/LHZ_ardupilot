@@ -1820,7 +1820,7 @@ void Compass::setHIL(uint8_t instance, float roll, float pitch, float yaw)
     _hil.field[instance].rotate((enum Rotation)_state[StateIndex(0)].orientation.get());
 
     if (!_state[StateIndex(0)].external) {
-        // and add in AHRS_ORIENTATION setting if not an external compass
+        // 如果没有外部指南针，则添加AHRS_ORIENTATION设置 and add in AHRS_ORIENTATION setting if not an external compass
         if (_board_orientation == ROTATION_CUSTOM && _custom_rotation) {
             _hil.field[instance] = *_custom_rotation * _hil.field[instance];
         } else {

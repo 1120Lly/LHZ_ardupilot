@@ -17,7 +17,8 @@ extern const AP_HAL::HAL& hal;
 #define INIT_ACCEL_BIAS_UNCERTAINTY 0.5f
 
 // maximum allowed gyro bias (rad/sec)
-#define GYRO_BIAS_LIMIT 0.5f
+ #define GYRO_BIAS_LIMIT 0.5f
+// #define GYRO_BIAS_LIMIT 10.0f
 
 /*
   to run EK2 timing tests you need to set ENABLE_EKF_TIMING to 1, plus setup as follows:
@@ -932,7 +933,7 @@ void NavEKF2_core::CovariancePrediction()
 
     for (uint8_t i= 0; i<=stateIndexLim; i++) processNoise[i] = sq(processNoise[i]);
 
-    // set variables used to calculate covariance growth
+    // 设置用于计算协方差增长的变量 set variables used to calculate covariance growth
     dvx = imuDataDelayed.delVel.x;
     dvy = imuDataDelayed.delVel.y;
     dvz = imuDataDelayed.delVel.z;
@@ -944,7 +945,7 @@ void NavEKF2_core::CovariancePrediction()
     q2 = stateStruct.quat[2];
     q3 = stateStruct.quat[3];
     dax_b = stateStruct.gyro_bias.x;
-    day_b = stateStruct.gyro_bias.y;
+    day_b = stateStruct.gyro_bias.y; // 陀螺仪俯仰偏斜，日志中显示平滑滞后的曲线
     daz_b = stateStruct.gyro_bias.z;
     dax_s = stateStruct.gyro_scale.x;
     day_s = stateStruct.gyro_scale.y;
@@ -955,6 +956,7 @@ void NavEKF2_core::CovariancePrediction()
     float _accNoise = constrain_float(frontend->_accNoise, 0.0f, 10.0f);
     dvxNoise = dvyNoise = dvzNoise = sq(dt*_accNoise);
 
+    // 计算惯性传感器误差传播引起的预测协方差，我们计算上对角线和复制利用对称性
     // calculate the predicted covariance due to inertial sensor error propagation
     // we calculate the upper diagonal and copy to take advantage of symmetry
     SF[0] = daz_b/2 - (daz*daz_s)/2;

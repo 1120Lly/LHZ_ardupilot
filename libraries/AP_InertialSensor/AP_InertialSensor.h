@@ -173,9 +173,10 @@ public:
      */
     float get_delta_time() const { return MIN(_delta_time, _loop_delta_t_max); }
 
-    // return the maximum gyro drift rate in radians/s/s. This
-    // depends on what gyro chips are being used
-    float get_gyro_drift_rate(void) const { return ToRad(0.5f/60); }
+    // 返回最大陀螺漂移速率，单位为弧度/秒/秒。这取决于使用的是什么陀螺芯片
+    // return the maximum gyro drift rate in radians/s/s. This depends on what gyro chips are being used
+//  float get_gyro_drift_rate(void) const { return ToRad(0.5f/60); }
+    float get_gyro_drift_rate(void) const { return ToRad(5.0f/60); }
 
     // update gyro and accel values from accumulated samples
     void update(void);

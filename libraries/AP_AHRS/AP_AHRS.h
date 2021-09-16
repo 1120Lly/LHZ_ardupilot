@@ -1,24 +1,5 @@
 #pragma once
-
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
- *  AHRS (Attitude Heading Reference System) interface for ArduPilot
- *
- */
+// AHRS (Attitude Heading Reference System) interface for ArduPilot
 
 #include <AP_Math/AP_Math.h>
 #include <inttypes.h>
@@ -61,17 +42,12 @@ public:
         _cos_yaw(1.0f)
     {
         _singleton = this;
-
         // load default values from var_info table
         AP_Param::setup_object_defaults(this, var_info);
-
-        // base the ki values by the sensors maximum drift
-        // rate.
+        // 根据传感器的最大漂移率确定ki值 base the ki values by the sensors maximum drift rate.
         _gyro_drift_limit = AP::ins().get_gyro_drift_rate();
-
         // enable centrifugal correction by default
         _flags.correct_centrifugal = true;
-
         _last_trim = _trim.get();
         _rotation_autopilot_body_to_vehicle_body.from_euler(_last_trim.x, _last_trim.y, 0.0f);
         _rotation_vehicle_body_to_autopilot_body = _rotation_autopilot_body_to_vehicle_body.transposed();
@@ -81,17 +57,13 @@ public:
     virtual ~AP_AHRS() {}
 
     // get singleton instance
-    static AP_AHRS *get_singleton() {
-        return _singleton;
-    }
+    static AP_AHRS *get_singleton() {  return _singleton;  }
 
     // init sets up INS board orientation
     virtual void init();
 
     // Accessors
-    void set_fly_forward(bool b) {
-        _flags.fly_forward = b;
-    }
+    void set_fly_forward(bool b) {  _flags.fly_forward = b;  }
 
     bool get_fly_forward(void) const {
         return _flags.fly_forward;
@@ -235,6 +207,8 @@ public:
 
     // return a smoothed and corrected gyro vector in radians/second using the latest ins data (which may not have been consumed by the EKF yet)
     Vector3f get_gyro_latest(void) const;
+
+//    Vector3f gyro_rotate(Vector3f gyro_rot) const;
 
     // return the current estimate of the gyro drift
     virtual const Vector3f &get_gyro_drift(void) const = 0;

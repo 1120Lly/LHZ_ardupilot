@@ -44,7 +44,7 @@ void QuadPlane::tailsitter_output(void)
     float tilt_right = 0.0f;
     uint16_t mask = tailsitter.motor_mask;
 
-    // handle forward flight modes and transition to VTOL modes
+    // 处理前进飞行模式和过渡到垂直起降模式 handle forward flight modes and transition to VTOL modes
     if (!tailsitter_active() || in_tailsitter_vtol_transition()) {
         // in forward flight: set motor tilt servos and throttles using FW controller
         if (tailsitter.vectored_forward_gain > 0) {
@@ -57,7 +57,7 @@ void QuadPlane::tailsitter_output(void)
         SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorLeft, tilt_left);
         SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorRight, tilt_right);
 
-        // get FW controller throttle demand and mask of motors enabled during forward flight
+        // 使FW控制器油门需求和发动机面罩在前进飞行中启用 get FW controller throttle demand and mask of motors enabled during forward flight
         float throttle = SRV_Channels::get_output_scaled(SRV_Channel::k_throttle);
         if (hal.util->get_soft_armed()) {
             if (in_tailsitter_vtol_transition() && !throttle_wait && is_flying()) {
@@ -108,9 +108,10 @@ void QuadPlane::tailsitter_output(void)
         tilt_left = SRV_Channels::get_output_scaled(SRV_Channel::k_tiltMotorLeft);
         tilt_right = SRV_Channels::get_output_scaled(SRV_Channel::k_tiltMotorRight);
         /*
-          apply extra elevator when at high pitch errors, using a
-          power law. This allows the motors to point straight up for
-          takeoff without integrator windup
+          使用幂律，在高音调误差时应用额外的电梯。
+          这允许电机直接指向起飞没有积分器上发条
+          apply extra elevator when at high pitch errors, using a power law.
+          This allows the motors to point straight up for takeoff without integrator windup
          */
         int32_t pitch_error_cd = (plane.nav_pitch_cd - ahrs_view->pitch_sensor) * 0.5;
         float extra_pitch = constrain_float(pitch_error_cd, -SERVO_MAX, SERVO_MAX) / SERVO_MAX;
@@ -153,6 +154,7 @@ void QuadPlane::tailsitter_output(void)
 
 
 /*
+  当我们完成了足够的转换以切换到固定翼控制时返回true
   return true when we have completed enough of a transition to switch to fixed wing control
  */
 bool QuadPlane::tailsitter_transition_fw_complete(void)
@@ -176,6 +178,7 @@ bool QuadPlane::tailsitter_transition_fw_complete(void)
 
 
 /*
+  当我们完成足够的过渡切换到垂直起降控制时返回true
   return true when we have completed enough of a transition to switch to VTOL control
  */
 bool QuadPlane::tailsitter_transition_vtol_complete(void) const

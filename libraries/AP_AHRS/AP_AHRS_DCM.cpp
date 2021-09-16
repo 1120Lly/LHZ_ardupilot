@@ -1,37 +1,33 @@
 //  APM_AHRS_DCM.cpp  AHRS系统使用DCM方向余弦矩阵
-//  Based on DCM code by Doug Weibel, Jordi Munoz and Jose Julio. DIYDrones.com
-//  Adapted for the general ArduPilot AHRS interface by Andrew Tridgell
+//  由Andrew Tridgell改编的ArduPilot AHRS通用接口 Adapted for the general ArduPilot AHRS interface by Andrew Tridgell
 
 #include "AP_AHRS.h"
 #include <AP_HAL/AP_HAL.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_GPS/AP_GPS.h>
 #include <AP_Baro/AP_Baro.h>
-
 extern const AP_HAL::HAL& hal;
 
-// this is the speed in m/s above which we first get a yaw lock with
-// the GPS
+// this is the speed in m/s above which we first get a yaw lock with the GPS
 #define GPS_SPEED_MIN 3
 
-// the limit (in degrees/second) beyond which we stop integrating
-// omega_I. At larger spin rates the DCM PI controller can get 'dizzy'
-// which results in false gyro drift. See
-// http://gentlenav.googlecode.com/files/fastRotations.pdf
-#define SPIN_RATE_LIMIT 20
+// 这个极限以度/秒为单位，超过这个极限就停止积分
+// 可以考虑增大，但不能太大，经测试，这个值对偏转速率影响不大
+// 在较大的旋转速率下，DCM PI控制器会出现“眩晕”，导致假陀螺漂移
+// the limit (in degrees/second) beyond which we stop integrating omega_I.
+// At larger spin rates the DCM PI controller can get 'dizzy' which results in false gyro drift.
+// See http://gentlenav.googlecode.com/files/fastRotations.pdf
+// #define SPIN_RATE_LIMIT 20
+#define SPIN_RATE_LIMIT 30
 
-// reset the current gyro drift estimate
-//  should be called if gyro offsets are recalculated
-void
-AP_AHRS_DCM::reset_gyro_drift(void)
-{
-    _omega_I.zero();
+// reset the current gyro drift estimate should be called if gyro offsets are recalculated
+void AP_AHRS_DCM::reset_gyro_drift(void)
+{    _omega_I.zero();
     _omega_I_sum.zero();
     _omega_I_sum_time = 0;
 }
 
-
-/* if this was a watchdog reset then get home from backup registers */
+// if this was a watchdog reset then get home from backup registers
 void AP_AHRS_DCM::load_watchdog_home()
 {
     const AP_HAL::Util::PersistentData &pd = hal.util->persistent_data;
@@ -46,8 +42,7 @@ void AP_AHRS_DCM::load_watchdog_home()
 }
 
 // run a full DCM update round
-void
-AP_AHRS_DCM::update(bool skip_ins_update)
+void AP_AHRS_DCM::update(bool skip_ins_update)
 {
     // support locked access functions to AHRS data
     WITH_SEMAPHORE(_rsem);
@@ -102,9 +97,7 @@ AP_AHRS_DCM::update(bool skip_ins_update)
     backup_attitude();
 }
 
-/*
-  backup attitude to persistent_data for use in watchdog reset
- */
+// 用于看门狗复位持续数据的备份姿态 backup attitude to persistent_data for use in watchdog reset
 void AP_AHRS_DCM::backup_attitude(void)
 {
     AP_HAL::Util::PersistentData &pd = hal.util->persistent_data;
@@ -114,8 +107,7 @@ void AP_AHRS_DCM::backup_attitude(void)
 }
 
 // update the DCM matrix using only the gyros
-void
-AP_AHRS_DCM::matrix_update(float _G_Dt)
+void AP_AHRS_DCM::matrix_update(float _G_Dt)
 {
     // note that we do not include the P terms in _omega. This is
     // because the spin_rate is calculated from _omega.length(),
@@ -140,9 +132,7 @@ AP_AHRS_DCM::matrix_update(float _G_Dt)
             }
         }
     }
-    if (healthy_count > 1) {
-        delta_angle /= healthy_count;
-    }
+    if (healthy_count > 1) {  delta_angle /= healthy_count;  }
     if (_G_Dt > 0) {
         _omega = delta_angle / _G_Dt;
         _omega += _omega_I;
@@ -155,8 +145,7 @@ AP_AHRS_DCM::matrix_update(float _G_Dt)
  *  reset the DCM matrix and omega. Used on ground start, and on
  *  extreme errors in the matrix
  */
-void
-AP_AHRS_DCM::reset(bool recover_eulers)
+void AP_AHRS_DCM::reset(bool recover_eulers)
 {
     // support locked access functions to AHRS data
     WITH_SEMAPHORE(_rsem);
@@ -228,8 +217,7 @@ void AP_AHRS_DCM::reset_attitude(const float &_roll, const float &_pitch, const 
 /*
  *  check the DCM matrix for pathological values
  */
-void
-AP_AHRS_DCM::check_matrix(void)
+void AP_AHRS_DCM::check_matrix(void)
 {
     if (_dcm_matrix.is_nan()) {
         //Serial.printf("ERROR: DCM matrix NAN\n");
@@ -363,46 +351,38 @@ AP_AHRS_DCM::yaw_error_compass(void)
     return rb % _mag_earth;
 }
 
-// the _P_gain raises the gain of the PI controller
-// when we are spinning fast. See the fastRotations
-// paper from Bill.
-float
-AP_AHRS_DCM::_P_gain(float spin_rate)
+// 当我们快速旋转时，_P_gain提高PI控制器的增益，看比尔的快速旋转论文
+// the _P_gain raises the gain of the PI controller when we are spinning fast. See the fastRotations paper from Bill.
+float AP_AHRS_DCM::_P_gain(float spin_rate)
 {
-    if (spin_rate < ToRad(50)) {
-        return 1.0f;
-    }
-    if (spin_rate > ToRad(500)) {
-        return 10.0f;
-    }
+    if (spin_rate < ToRad(50 )) {  return  1.0f;  }
+    if (spin_rate > ToRad(500)) {  return 10.0f;  }
     return spin_rate/ToRad(50);
 }
 
-// _yaw_gain reduces the gain of the PI controller applied to heading errors
-// when observability from change of velocity is good (eg changing speed or turning)
-// This reduces unwanted roll and pitch coupling due to compass errors for planes.
-// High levels of noise on _accel_ef will cause the gain to drop and could lead to
-// increased heading drift during straight and level flight, however some gain is
-// always available. TODO check the necessity of adding adjustable acc threshold
-// and/or filtering accelerations before getting magnitude
-float
-AP_AHRS_DCM::_yaw_gain(void) const
+ /* 当从速度变化(如改变速度或转弯)的可观测性良好时，yaw_gain减少PI控制器应用于航向误差的增益。
+ 这减少了不必要的滚转和俯仰耦合由于罗盘误差的飞机。 在_accel_ef上的高水平噪声将导致增益下降，
+ 并可能导致在直线和水平飞行中增加航向漂移，但某些增益总是可用的。
+ 在得到幅度之前，检查添加可调acc阈值和/或滤波加速度的必要性
+ _yaw_gain reduces the gain of the PI controller applied to heading errors
+ when observability from change of velocity is good (eg changing speed or turning)
+ This reduces unwanted roll and pitch coupling due to compass errors for planes.
+ High levels of noise on _accel_ef will cause the gain to drop and could lead to
+ increased heading drift during straight and level flight, however some gain is always available.
+ TODO check the necessity of adding adjustable acc threshold and/or filtering accelerations before getting magnitude
+ */
+float AP_AHRS_DCM::_yaw_gain(void) const
 {
     const float VdotEFmag = norm(_accel_ef[_active_accel_instance].x,
                                    _accel_ef[_active_accel_instance].y);
-    if (VdotEFmag <= 4.0f) {
-        return 0.2f*(4.5f - VdotEFmag);
-    }
+    if (VdotEFmag <= 4.0f) {  return 0.2f*(4.5f - VdotEFmag);  }
     return 0.1f;
 }
-
 
 // return true if we have and should use GPS
 bool AP_AHRS_DCM::have_gps(void) const
 {
-    if (AP::gps().status() <= AP_GPS::NO_FIX || !_gps_use) {
-        return false;
-    }
+    if (AP::gps().status() <= AP_GPS::NO_FIX || !_gps_use) {  return false;  }
     return true;
 }
 
@@ -580,46 +560,39 @@ AP_AHRS_DCM::drift_correction_yaw(void)
     _error_yaw = 0.8f * _error_yaw + 0.2f * fabsf(yaw_error);
 }
 
-
-/**
-   return an accel vector delayed by AHRS_ACCEL_DELAY samples for a
-   specific accelerometer instance
- */
+// 返回一个由AHRS_ACCEL_DELAY样本延迟的加速度计向量
+// return an accel vector delayed by AHRS_ACCEL_DELAY samples for a specific accelerometer instance
 Vector3f AP_AHRS_DCM::ra_delayed(uint8_t instance, const Vector3f &ra)
 {
     // get the old element, and then fill it with the new element
     const Vector3f ret = _ra_delay_buffer[instance];
     _ra_delay_buffer[instance] = ra;
-    if (ret.is_zero()) {
-        // use the current vector if the previous vector is exactly
-        // zero. This prevents an error on initialisation
-        return ra;
-    }
+    if (ret.is_zero()) {  return ra;  }
+    // use the current vector if the previous vector is exactly zero. This prevents an error on initialisation
     return ret;
 }
 
-// perform drift correction. This function aims to update _omega_P and
-// _omega_I with our best estimate of the short term and long term
-// gyro error. The _omega_P value is what pulls our attitude solution
-// back towards the reference vector quickly. The _omega_I term is an
-// attempt to learn the long term drift rate of the gyros.
-//
-// This drift correction implementation is based on a paper
-// by Bill Premerlani from here:
-//   http://gentlenav.googlecode.com/files/RollPitchDriftCompensation.pdf
-void
-AP_AHRS_DCM::drift_correction(float deltat)
+// 执行漂移修正 perform drift correction.
+// 这个函数的目的是用我们对短期和长期陀螺误差的最佳估计来更新_omega_P和_omega_i。
+// _omega_P值将我们的态度解快速拉回参考向量。
+// _omega_I项是试图了解陀螺的长期漂移率。
+// 这个漂移校正的实现是基于Bill Premerlani的一篇文章:
+// This function aims to update _omega_P and_omega_I with our best estimate of the short term and long term gyro error.
+// The _omega_P value is what pulls our attitude solution back towards the reference vector quickly.
+// The _omega_I term is an attempt to learn the long term drift rate of the gyros.
+// This drift correction implementation is based on a paper by Bill Premerlani from here:
+// http://gentlenav.googlecode.com/files/RollPitchDriftCompensation.pdf
+void AP_AHRS_DCM::drift_correction(float deltat)
 {
     Vector3f velocity;
     uint32_t last_correction_time;
 
-    // perform yaw drift correction if we have a new yaw reference
-    // vector
+    // perform yaw drift correction if we have a new yaw reference vector
     drift_correction_yaw();
 
     const AP_InertialSensor &_ins = AP::ins();
 
-    // rotate accelerometer values into the earth frame
+    // 将加速度计的值旋转到地球坐标系中 rotate accelerometer values into the earth frame
     uint8_t healthy_count = 0;
     for (uint8_t i=0; i<_ins.get_accel_count(); i++) {
         if (_ins.use_accel(i) && healthy_count < 2) {
@@ -633,14 +606,14 @@ AP_AHRS_DCM::drift_correction(float deltat)
             const float delta_velocity_dt = _ins.get_delta_velocity_dt(i);
             if (delta_velocity_dt > 0) {
                 _accel_ef[i] = _dcm_matrix * (delta_velocity / delta_velocity_dt);
-                // integrate the accel vector in the earth frame between GPS readings
+                // 在GPS读数之间在地球坐标系中积分加速度矢量 integrate the accel vector in the earth frame between GPS readings
                 _ra_sum[i] += _accel_ef[i] * deltat;
             }
             healthy_count++;
         }
     }
 
-    //update _accel_ef_blended
+    // update _accel_ef_blended
     if (_ins.get_accel_count() == 2 && _ins.use_accel(0) && _ins.use_accel(1)) {
         const float imu1_weight_target = _active_accel_instance == 0 ? 1.0f : 0.0f;
         // slew _imu1_weight over one second
@@ -650,8 +623,7 @@ AP_AHRS_DCM::drift_correction(float deltat)
         _accel_ef_blended = _accel_ef[_ins.get_primary_accel()];
     }
 
-    // keep a sum of the deltat values, so we know how much time
-    // we have integrated over
+    // keep a sum of the deltat values, so we know how much time we have integrated over
     _ra_deltat += deltat;
 
     const AP_GPS &_gps = AP::gps();
@@ -760,15 +732,20 @@ AP_AHRS_DCM::drift_correction(float deltat)
         using_gps_corrections = true;
     }
 
-    // calculate the error term in earth frame.
-    // we do this for each available accelerometer then pick the
-    // accelerometer that leads to the smallest error term. This takes
-    // advantage of the different sample rates on different
-    // accelerometers to dramatically reduce the impact of aliasing
-    // due to harmonics of vibrations that match closely the sampling
-    // rate of our accelerometers. On the Pixhawk we have the LSM303D
-    // running at 800Hz and the MPU6000 running at 1kHz, by combining
-    // the two the effects of aliasing are greatly reduced.
+/*
+    计算地球坐标系中的误差项。
+    我们为每个可用的加速度计做这个，然后选择导致最小误差项的加速度计。
+    这利用了不同加速度计上的不同采样率来显著降低影响
+    由于振动的谐波与加速度计的采样率非常匹配而产生的混叠。
+    在Pixhawk上，LSM303D运行在800Hz, MPU6000运行在1kHz，
+    通过结合这两种方法，可以大大减少混叠的影响。
+    calculate the error term in earth frame.
+    we do this for each available accelerometer then pick the accelerometer that leads to the smallest error term.
+    This takes advantage of the different sample rates on different accelerometers to dramatically reduce the impact
+    of aliasing due to harmonics of vibrations that match closely the sampling rate of our accelerometers.
+    On the Pixhawk we have the LSM303D running at 800Hz and the MPU6000 running at 1kHz,
+    by combining the two the effects of aliasing are greatly reduced.
+*/
     Vector3f error[INS_MAX_INSTANCES];
     float error_dirn[INS_MAX_INSTANCES];
     Vector3f GA_b[INS_MAX_INSTANCES];
@@ -805,10 +782,7 @@ AP_AHRS_DCM::drift_correction(float deltat)
             best_error = error_length;
         }
         // Catch case where orientation is 180 degrees out
-        if (error_dirn[besti] < 0.0f) {
-            best_error = 1.0f;
-        }
-
+        if (error_dirn[besti] < 0.0f) {  best_error = 1.0f;  }
     }
 
     if (besti == -1) {
@@ -877,9 +851,10 @@ AP_AHRS_DCM::drift_correction(float deltat)
         _kp = AP_AHRS_RP_P_MIN;
     }
 
-    // we now want to calculate _omega_P and _omega_I. The
-    // _omega_P value is what drags us quickly to the
-    // accelerometer reading.
+    // 现在我们要计算_omega_P和_omega_I
+    // _omega_P值将我们快速拖动到加速度计读数
+    // we now want to calculate _omega_P and _omega_I.
+    // The _omega_P value is what drags us quickly to the accelerometer reading.
     _omega_P = error[besti] * _P_gain(spin_rate) * _kp;
     if (use_fast_gains()) {
         _omega_P *= 8;
@@ -889,23 +864,24 @@ AP_AHRS_DCM::drift_correction(float deltat)
             _gps.ground_speed() < GPS_SPEED_MIN &&
             _ins.get_accel().x >= 7 &&
             pitch_sensor > -3000 && pitch_sensor < 3000) {
+        // 假设我们是在一个发射加速度，并减少50%的rp增益，以减少GPS滞后对起飞姿态的影响时，使用弹射器
         // assume we are in a launch acceleration, and reduce the
         // rp gain by 50% to reduce the impact of GPS lag on
         // takeoff attitude when using a catapult
         _omega_P *= 0.5f;
     }
 
-    // accumulate some integrator error
+    // 积累一些积分器误差 accumulate some integrator error
     if (spin_rate < ToRad(SPIN_RATE_LIMIT)) {
         _omega_I_sum += error[besti] * _ki * _ra_deltat;
         _omega_I_sum_time += _ra_deltat;
     }
 
     if (_omega_I_sum_time >= 5) {
-        // limit the rate of change of omega_I to the hardware
-        // reported maximum gyro drift rate. This ensures that
-        // short term errors don't cause a buildup of omega_I
-        // beyond the physical limits of the device
+        // 将omega_I的变化率限制到硬件报告的最大陀螺漂移率
+        // 这确保了短期误差不会导致omega_I积聚超过设备的物理极限
+        // limit the rate of change of omega_I to the hardware reported maximum gyro drift rate.
+        // This ensures that short term errors don't cause a buildup of omega_I beyond the physical limits of the device
         const float change_limit = _gyro_drift_limit * _omega_I_sum_time;
         _omega_I_sum.x = constrain_float(_omega_I_sum.x, -change_limit, change_limit);
         _omega_I_sum.y = constrain_float(_omega_I_sum.y, -change_limit, change_limit);
@@ -924,8 +900,7 @@ AP_AHRS_DCM::drift_correction(float deltat)
     _last_velocity = velocity;
 }
 
-
-// update our wind speed estimate
+// 更新我们的风速估计 update our wind speed estimate
 void AP_AHRS_DCM::estimate_wind(void)
 {
     if (!_flags.wind_estimation) {
@@ -987,22 +962,28 @@ void AP_AHRS_DCM::estimate_wind(void)
     }
 }
 
-
-
-// calculate the euler angles and DCM matrix which will be used for high level
-// navigation control. Apply trim such that a positive trim value results in a
-// positive vehicle rotation about that axis (ie a negative offset)
+/*
+ 计算用于高层导航控制的欧拉角和DCM矩阵， 应用修整，使正修整值导致车辆围绕该轴正旋转(即负偏移)。
+ calculate the euler angles and DCM matrix which will be used for high level navigation control.
+ Apply trim such that a positive trim value results in a positive vehicle rotation about that axis (ie a negative offset)
+*/
 void
 AP_AHRS_DCM::euler_angles(void)
 {
-    _body_dcm_matrix = _dcm_matrix * get_rotation_vehicle_body_to_autopilot_body();
-    _body_dcm_matrix.to_euler(&roll, &pitch, &yaw);
+    // 此处提供了一种俯仰旋转的语法，经测试验证，方法可行且稳定，可用于姿态控制
+    Matrix3f board_rotation;
+    float board_rotate = RC_Channels::get_radio_in(CH_6);
+    board_rotate= (board_rotate -1500) *0.2f; // 这里决定着倾斜角最大能转多少度
+    board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
 
+    _body_dcm_matrix = _dcm_matrix * get_rotation_vehicle_body_to_autopilot_body();
+    _body_dcm_matrix = _body_dcm_matrix * board_rotation;
+    _body_dcm_matrix.to_euler(&roll, &pitch, &yaw);
     update_cd_values();
 }
 
-// return our current position estimate using
-// dead-reckoning or GPS
+// 使用当前位置估计或GPS返回我们目前的位置估计
+// return our current position estimate using dead-reckoning or GPS
 bool AP_AHRS_DCM::get_position(struct Location &loc) const
 {
     loc.lat = _last_lat;
@@ -1012,11 +993,10 @@ bool AP_AHRS_DCM::get_position(struct Location &loc) const
     loc.terrain_alt = 0;
     loc.offset(_position_offset_north, _position_offset_east);
     const AP_GPS &_gps = AP::gps();
-    if (_flags.fly_forward && _have_position) {
-        float gps_delay_sec = 0;
+    if (_flags.fly_forward && _have_position)
+    {   float gps_delay_sec = 0;
         _gps.get_lag(gps_delay_sec);
-        loc.offset_bearing(_gps.ground_course_cd() * 0.01f, _gps.ground_speed() * gps_delay_sec);
-    }
+        loc.offset_bearing(_gps.ground_course_cd() * 0.01f, _gps.ground_speed() * gps_delay_sec);  }
     return _have_position;
 }
 

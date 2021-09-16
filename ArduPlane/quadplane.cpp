@@ -645,7 +645,7 @@ bool QuadPlane::setup(void)
             motors_var_info = AP_MotorsTri::var_info;
             break;
         case AP_Motors::MOTOR_FRAME_TAILSITTER:
-            // this is a duo-motor tailsitter (vectored thrust if tilt.tilt_mask != 0)
+            // 这是一个双马达尾座(矢量推力)   this is a duo-motor tailsitter (vectored thrust if tilt.tilt_mask != 0)
             motors = new AP_MotorsTailsitter(plane.scheduler.get_loop_rate_hz(), rc_speed);
             motors_var_info = AP_MotorsTailsitter::var_info;
             if (tilt.tilt_type != TILT_TYPE_BICOPTER) {
@@ -658,6 +658,7 @@ bool QuadPlane::setup(void)
             break;
         }
     } else {
+        // 这是一个直升机尾座，电机布局由frame_class和frame_type指定，不支持倾斜电机(倾斜旋翼控制变量被忽略)
         // this is a copter tailsitter with motor layout specified by frame_class and frame_type
         // tilting motors are not supported (tiltrotor control variables are ignored)
         if (tilt.tilt_mask != 0) {
@@ -1017,11 +1018,12 @@ void QuadPlane::control_qacro(void)
 
         motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
-        // convert the input to the desired body frame rate
+        // 将输入转换为所需的机体角速率 convert the input to the desired body frame rate
         float target_roll = 0;
         float target_pitch = plane.channel_pitch->norm_input() * acro_pitch_rate * 100.0f;
         float target_yaw = 0;
         if (is_tailsitter()) {
+            // 注意，直升机模式的90度Y旋转改变了机身的滚转和偏航acro_roll_rate参数适用于直升机的偏航
             // Note that the 90 degree Y rotation for copter mode swaps body-frame roll and yaw
             // acro_roll_rate param applies to yaw in copter frame
             target_roll =  plane.channel_rudder->norm_input() * acro_roll_rate * 100.0f;
@@ -1506,7 +1508,7 @@ void QuadPlane::update_transition(void)
     }
     
     /*
-      see if we should provide some assistance
+      看看我们是否应该提供帮助 see if we should provide some assistance
      */
     if (have_airspeed &&
         assistance_needed(aspeed) &&
@@ -1590,6 +1592,7 @@ void QuadPlane::update_transition(void)
         }
         hold_hover(climb_rate_cms);
 
+        // 在期望的角度和速率要求下，将期望偏航设置为当前偏航。这减少了由于直升机偏航需求而导致的机翼扭转
         // set desired yaw to current yaw in both desired angle and
         // rate request. This reduces wing twist in transition due to
         // multicopter yaw demands
@@ -1598,6 +1601,7 @@ void QuadPlane::update_transition(void)
 
         last_throttle = motors->get_throttle();
 
+        // 当我们低于目标空速时，重置集成器，因为我们可能在主要还是在直升机控制下时积累太多
         // reset integrators while we are below target airspeed as we
         // may build up too much while still primarily under
         // multicopter control
@@ -1649,9 +1653,10 @@ void QuadPlane::update_transition(void)
     case TRANSITION_ANGLE_WAIT_FW: {
         motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
         assisted_flight = true;
-        // calculate transition rate in degrees per
-        // millisecond. Assume we want to get to the transition angle
-        // in half the transition time
+        //计算转换速率，单位为度/毫秒。
+        //假设我们想在一半的过渡时间内得到过渡角
+        // calculate transition rate in degrees per millisecond.
+        // Assume we want to get to the transition angle in half the transition time
         float transition_rate = tailsitter.transition_angle / float(transition_time_ms/2);
         uint32_t dt = now - transition_start_ms;
         plane.nav_pitch_cd = constrain_float((-transition_rate * dt)*100, -8500, 0);

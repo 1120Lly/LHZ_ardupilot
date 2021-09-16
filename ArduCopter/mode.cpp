@@ -411,15 +411,15 @@ void Mode::get_pilot_desired_lean_angles(float &roll_out, float &pitch_out, floa
     roll_out = channel_roll->get_control_in();
     pitch_out = channel_pitch->get_control_in();
 
-	// limit max lean angle
+	// 限制最大倾斜角度 limit max lean angle
     angle_limit = constrain_float(angle_limit, 1000.0f, angle_max);
 
-    // scale roll and pitch inputs to ANGLE_MAX parameter range
+    // 缩放系数 scale roll and pitch inputs to ANGLE_MAX parameter range
     float scaler = angle_max/(float)ROLL_PITCH_YAW_INPUT_MAX;
     roll_out *= scaler;
     pitch_out *= scaler;
 
-    // do circular limit
+    // 循环限制 do circular limit
     float total_in = norm(pitch_out, roll_out);
     if (total_in > angle_limit) {
         float ratio = angle_limit / total_in;
@@ -427,10 +427,10 @@ void Mode::get_pilot_desired_lean_angles(float &roll_out, float &pitch_out, floa
         pitch_out *= ratio;
     }
 
-    // do lateral tilt to euler roll conversion
+    // 侧倾转为欧拉滚转 do lateral tilt to euler roll conversion
     roll_out = (18000/M_PI) * atanf(cosf(pitch_out*(M_PI/18000))*tanf(roll_out*(M_PI/18000)));
 
-    // roll_out and pitch_out are returned
+    // 返回期望倾斜角 roll_out and pitch_out are returned
 }
 
 bool Mode::_TakeOff::triggered(const float target_climb_rate) const

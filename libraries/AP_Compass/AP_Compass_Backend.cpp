@@ -22,7 +22,7 @@ void AP_Compass_Backend::rotate_field(Vector3f &mag, uint8_t instance)
     mag.rotate(state.rotation);
 
     if (!state.external) {
-        // and add in AHRS_ORIENTATION setting if not an external compass
+        // 如果没有外部指南针，则添加AHRS_ORIENTATION设置 and add in AHRS_ORIENTATION setting if not an external compass
         if (_compass._board_orientation == ROTATION_CUSTOM && _compass._custom_rotation) {
             mag = *_compass._custom_rotation * mag;
         } else {
@@ -227,7 +227,7 @@ bool AP_Compass_Backend::is_external(uint8_t instance)
     return _compass._state[Compass::StateIndex(instance)].external;
 }
 
-// set rotation of an instance
+// 设置实例的旋转 set rotation of an instance
 void AP_Compass_Backend::set_rotation(uint8_t instance, enum Rotation rotation)
 {
     _compass._state[Compass::StateIndex(instance)].rotation = rotation;

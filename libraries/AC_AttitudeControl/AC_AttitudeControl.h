@@ -387,8 +387,8 @@ protected:
     // Intersampling period in seconds
     float               _dt;
 
-    // This represents a 321-intrinsic rotation in NED frame to the target (setpoint)
-    // attitude used in the attitude controller, in radians.
+    // 这表示从北东地坐标系到设定目标的321本征旋转 This represents a 321-intrinsic rotation in NED frame to the target (setpoint)
+    // 姿态控制器中使用的弧度姿态 attitude used in the attitude controller, in radians.
     Vector3f            _attitude_target_euler_angle;
 
     // This represents the angular velocity of the target (setpoint) attitude used in
@@ -396,10 +396,11 @@ protected:
     // second.
     Vector3f            _attitude_target_euler_rate;
 
-    // This represents a quaternion rotation in NED frame to the target (setpoint)
-    // attitude used in the attitude controller.
+    // 这表示从北东地坐标系到设定目标的一个四元数旋转 This represents a quaternion rotation in NED frame to the target (setpoint)
+    // 姿态控制器中使用的姿态 attitude used in the attitude controller.
     Quaternion          _attitude_target_quat;
 
+    // 这表示在姿态控制器中作为角速度矢量使用的目标(设定点)姿态的角速度，在目标姿态坐标系中以每秒弧度为单位。
     // This represents the angular velocity of the target (setpoint) attitude used in
     // the attitude controller as an angular velocity vector, in radians per second in
     // the target attitude frame.

@@ -274,7 +274,8 @@ void Copter::failsafe_terrain_on_event()
     }
 }
 
-// check for gps glitch failsafe
+// 注意：此处禁用了地面站消息
+// 检查GPS失灵故障 check for gps glitch failsafe
 void Copter::gpsglitch_check()
 {
     // get filter status
@@ -286,10 +287,10 @@ void Copter::gpsglitch_check()
         ap.gps_glitching = gps_glitching;
         if (gps_glitching) {
             AP::logger().Write_Error(LogErrorSubsystem::GPS, LogErrorCode::GPS_GLITCH);
-            gcs().send_text(MAV_SEVERITY_CRITICAL,"GPS Glitch");
+//            gcs().send_text(MAV_SEVERITY_CRITICAL,"GPS Glitch");
         } else {
             AP::logger().Write_Error(LogErrorSubsystem::GPS, LogErrorCode::ERROR_RESOLVED);
-            gcs().send_text(MAV_SEVERITY_CRITICAL,"GPS Glitch cleared");
+//            gcs().send_text(MAV_SEVERITY_CRITICAL,"GPS Glitch cleared");
         }
     }
 }

@@ -324,10 +324,10 @@ void NavEKF2_core::readIMUData()
     }
 
     if (gyro_active != gyro_index_active) {
-        // we are switching active gyro at runtime. Copy over the
-        // biases we have learned from the previously inactive
-        // gyro. We don't re-init the bias uncertainty as it should
-        // have the same uncertainty as the previously active gyro
+        // 我们在运行时切换主动陀螺。复制我们从之前不活跃的陀螺仪中学到的偏差
+        // 我们不重新初始偏置不确定度，因为它应该有与先前主动陀螺相同的不确定度
+        // we are switching active gyro at runtime. Copy over the biases we have learned from the previously inactive gyro.
+        // We don't re-init the bias uncertainty as it should have the same uncertainty as the previously active gyro
         stateStruct.gyro_bias = inactiveBias[gyro_active].gyro_bias;
         gyro_index_active = gyro_active;
 

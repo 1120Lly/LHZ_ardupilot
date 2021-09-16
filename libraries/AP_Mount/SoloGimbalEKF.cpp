@@ -1,7 +1,7 @@
 #include <AP_HAL/AP_HAL.h>
 
-// uncomment this to force the optimisation of this code, note that
-// this makes debugging harder
+// 请注意，取消注释以强制优化此代码，这使得调试更加困难
+// uncomment this to force the optimisation of this code, note that. this makes debugging harder
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL || CONFIG_HAL_BOARD == HAL_BOARD_LINUX
 #pragma GCC optimize("O0")
 #else

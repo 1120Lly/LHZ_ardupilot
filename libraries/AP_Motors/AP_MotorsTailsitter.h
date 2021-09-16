@@ -6,6 +6,7 @@
 #include <AP_Math/AP_Math.h>
 #include <SRV_Channel/SRV_Channel.h>
 #include "AP_MotorsMulticopter.h"
+#include "AP_NavEKF2/AP_NavEKF2.h"
 
 /// @class      AP_MotorsTailsitter
 class AP_MotorsTailsitter : public AP_MotorsMulticopter {
@@ -47,4 +48,7 @@ protected:
     float _tilt_right;  // -1..1
     float _tilt_tail;  // -1..1
 
+
 };
+//NavEKF2 EKF2_temp;
+

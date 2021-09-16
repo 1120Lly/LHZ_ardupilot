@@ -1,22 +1,5 @@
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-// Copyright 2012 Andrew Tridgell, all rights reserved.
-// Refactored by Jonathan Challinger
+// 四元数
 #pragma once
-
 #include <cmath>
 #if MATH_CHECK_INDEXES
 #include <assert.h>
@@ -27,7 +10,7 @@ class Quaternion {
 public:
     float        q1, q2, q3, q4;
 
-    // constructor creates a quaternion equivalent
+    // 构造函数创建等价的四元数 constructor creates a quaternion equivalent
     // to roll=0, pitch=0, yaw=0
     Quaternion()
     {
@@ -94,10 +77,8 @@ public:
 
     // get euler roll angle
     float       get_euler_roll() const;
-
     // get euler pitch angle
     float       get_euler_pitch() const;
-
     // get euler yaw angle
     float       get_euler_yaw() const;
 

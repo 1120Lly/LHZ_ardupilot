@@ -147,15 +147,16 @@ const AP_Param::GroupInfo AC_AttitudeControl::var_info[] = {
     AP_GROUPEND
 };
 
-// Ensure attitude controller have zero errors to relax rate controller output
+// 保证姿态控制器零误差，以放松速率控制器输出 Ensure attitude controller have zero errors to relax rate controller output
 void AC_AttitudeControl::relax_attitude_controllers()
 {
-    // Initialize the attitude variables to the current attitude
+    // 将姿态变量初始化为当前姿态 Initialize the attitude variables to the current attitude
     _ahrs.get_quat_body_to_ned(_attitude_target_quat);
+    // 获取当前无人机目标姿态角
     _attitude_target_quat.to_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);
     _attitude_ang_error.initialise();
 
-    // Initialize the angular rate variables to the current rate
+    // 将角速率变量初始化为当前速率 Initialize the angular rate variables to the current rate
     _attitude_target_ang_vel = _ahrs.get_gyro();
     ang_vel_to_euler_rate(_attitude_target_euler_angle, _attitude_target_ang_vel, _attitude_target_euler_rate);
     _rate_target_ang_vel = _ahrs.get_gyro();
@@ -187,27 +188,44 @@ void AC_AttitudeControl::reset_rate_controller_I_terms_smoothly()
     get_rate_yaw_pid().reset_I_smoothly();
 }
 
-// The attitude controller works around the concept of the desired attitude, target attitude
-// and measured attitude. The desired attitude is the attitude input into the attitude controller
-// that expresses where the higher level code would like the aircraft to move to. The target attitude is moved
-// to the desired attitude with jerk, acceleration, and velocity limits. The target angular velocities are fed
-// directly into the rate controllers. The angular error between the measured attitude and the target attitude is
-// fed into the angle controller and the output of the angle controller summed at the input of the rate controllers.
-// By feeding the target angular velocity directly into the rate controllers the measured and target attitudes
-// remain very close together.
-//
-// All input functions below follow the same procedure
-// 1. define the desired attitude the aircraft should attempt to achieve using the input variables
-// 2. using the desired attitude and input variables, define the target angular velocity so that it should
-//    move the target attitude towards the desired attitude
-// 3. if _rate_bf_ff_enabled is not being used then make the target attitude
-//    and target angular velocities equal to the desired attitude and desired angular velocities.
-// 4. ensure _attitude_target_quat, _attitude_target_euler_angle, _attitude_target_euler_rate and
-//    _attitude_target_ang_vel have been defined. This ensures input modes can be changed without discontinuity.
-// 5. attitude_controller_run_quat is then run to pass the target angular velocities to the rate controllers and
-//    integrate them into the target attitude. Any errors between the target attitude and the measured attitude are
-//    corrected by first correcting the thrust vector until the angle between the target thrust vector measured
-//    trust vector drops below 2*AC_ATTITUDE_THRUST_ERROR_ANGLE. At this point the heading is also corrected.
+/*
+ 姿态控制器围绕期望姿态、目标姿态和测量姿态的概念工作。期望的姿态是姿态控制器的姿态输入，它表示更高级别的代码希望
+ 飞机移动到哪里。目标姿态被移动到期望的姿态与猛动，加速度和速度限制。目标角速度直接输入速率控制器。测量姿态和
+ 目标姿态之间的角误差被输入到角度控制器中，角度控制器的输出在速率控制器的输入处相加。通过将目标角速度直接输入速率
+ 控制器，测量姿态与目标姿态保持非常接近。
+
+ The attitude controller works around the concept of the desired attitude, target attitude
+ and measured attitude. The desired attitude is the attitude input into the attitude controller
+ that expresses where the higher level code would like the aircraft to move to. The target attitude is moved
+ to the desired attitude with jerk, acceleration, and velocity limits. The target angular velocities are fed
+ directly into the rate controllers. The angular error between the measured attitude and the target attitude is
+ fed into the angle controller and the output of the angle controller summed at the input of the rate controllers.
+ By feeding the target angular velocity directly into the rate controllers the measured and target attitudes
+ remain very close together.
+
+ 下面的所有输入函数都遵循相同的过程
+ 1。使用输入变量定义飞机应尝试达到的期望姿态
+ 2。使用期望的姿态和输入变量，定义目标角速度，以便它应该将目标姿态移动到期望的姿态
+ 3。如果_rate_bf_ff_enabled没有被使用，那么使目标姿态和目标角速度等于所需的姿态和所需的角速度。
+ 4。确保已定义_attitude_target_quat、_attitude_target_euler_angle、_attitude_target_euler_rate
+    和_attitude_target_ang_vel。这确保了输入模式可以不间断地改变。
+ 5。然后运行Attitude_controller_run_quat，将目标角速度传递给速率控制器，并将它们集成到目标姿态中。
+    目标姿态与测量姿态之间的任何误差首先通过修正推力矢量来修正，直到目标推力矢量测量信任矢量之间的角度
+    降至2* ac_titude_thrust_error_angle以下。此时，标题也被更正了。
+
+ All input functions below follow the same procedure
+ 1. define the desired attitude the aircraft should attempt to achieve using the input variables
+ 2. using the desired attitude and input variables, define the target angular velocity so that it should
+    move the target attitude towards the desired attitude
+ 3. if _rate_bf_ff_enabled is not being used then make the target attitude
+    and target angular velocities equal to the desired attitude and desired angular velocities.
+ 4. ensure _attitude_target_quat, _attitude_target_euler_angle, _attitude_target_euler_rate and
+    _attitude_target_ang_vel have been defined. This ensures input modes can be changed without discontinuity.
+ 5. attitude_controller_run_quat is then run to pass the target angular velocities to the rate controllers and
+    integrate them into the target attitude. Any errors between the target attitude and the measured attitude are
+    corrected by first correcting the thrust vector until the angle between the target thrust vector measured
+    trust vector drops below 2*AC_ATTITUDE_THRUST_ERROR_ANGLE. At this point the heading is also corrected.
+*/
 
 // Command a Quaternion attitude with feedforward and smoothing
 void AC_AttitudeControl::input_quaternion(Quaternion attitude_desired_quat)
@@ -294,22 +312,22 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw(float euler
     attitude_controller_run_quat();
 }
 
-// Command an euler roll, pitch and yaw angle with angular velocity feedforward and smoothing
+// 欧拉角和角速度的前馈与平滑 Command an euler roll, pitch and yaw angle with angular velocity feedforward and smoothing
 void AC_AttitudeControl::input_euler_angle_roll_pitch_yaw(float euler_roll_angle_cd, float euler_pitch_angle_cd, float euler_yaw_angle_cd, bool slew_yaw)
 {
-    // Convert from centidegrees on public interface to radians
+    // 从厘度转为弧度 Convert from centidegrees on public interface to radians
     float euler_roll_angle = radians(euler_roll_angle_cd * 0.01f);
     float euler_pitch_angle = radians(euler_pitch_angle_cd * 0.01f);
     float euler_yaw_angle = radians(euler_yaw_angle_cd * 0.01f);
 
-    // calculate the attitude target euler angles
+    // 计算目标姿态欧拉角 calculate the attitude target euler angles
     _attitude_target_quat.to_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);
 
-    // Add roll trim to compensate tail rotor thrust in heli (will return zero on multirotors)
+    // 直升机所需，在多旋翼上返回零 Add roll trim to compensate tail rotor thrust in heli (will return zero on multirotors)
     euler_roll_angle += get_roll_trim_rad();
 
     if (_rate_bf_ff_enabled) {
-        // translate the roll pitch and yaw acceleration limits to the euler axis
+        // 将角加速度转为欧拉坐标系 translate the roll pitch and yaw acceleration limits to the euler axis
         Vector3f euler_accel = euler_accel_limit(_attitude_target_euler_angle, Vector3f(get_accel_roll_max_radss(), get_accel_pitch_max_radss(), get_accel_yaw_max_radss()));
 
         // When acceleration limiting and feedforward are enabled, the sqrt controller is used to compute an euler
@@ -322,6 +340,7 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_yaw(float euler_roll_angle
             _attitude_target_euler_rate.z = constrain_float(_attitude_target_euler_rate.z, -get_slew_yaw_rads(), get_slew_yaw_rads());
         }
 
+        // 将欧拉角导数，转化到机体坐标系中速度矢量，作为前馈速度矢量
         // Convert euler angle derivative of desired attitude into a body-frame angular velocity vector for feedforward
         euler_rate_to_ang_vel(_attitude_target_euler_angle, _attitude_target_euler_rate, _attitude_target_ang_vel);
         // Limit the angular velocity
@@ -348,7 +367,7 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_yaw(float euler_roll_angle
         _attitude_target_ang_vel = Vector3f(0.0f, 0.0f, 0.0f);
     }
 
-    // Call quaternion attitude controller
+    // 访问四元数姿态控制器 Call quaternion attitude controller
     attitude_controller_run_quat();
 }
 
@@ -650,7 +669,8 @@ void AC_AttitudeControl::input_angle_step_bf_roll_pitch_yaw(float roll_angle_ste
     attitude_controller_run_quat();
 }
 
-// Calculates the body frame angular velocities to follow the target attitude
+// 运行姿态控制器，使用四元数
+// 计算跟随目标姿态的机体坐标系角速度 Calculates the body frame angular velocities to follow the target attitude
 void AC_AttitudeControl::attitude_controller_run_quat()
 {
     // Retrieve quaternion vehicle attitude
@@ -664,6 +684,7 @@ void AC_AttitudeControl::attitude_controller_run_quat()
     // Compute the angular velocity target from the attitude error
     _rate_target_ang_vel = update_ang_vel_target_from_att_error(attitude_error_vector);
 
+    // 添加前馈项，以确保滚动和俯仰误差随机体框架而不是参考框架旋转。
     // Add feedforward term that attempts to ensure that roll and pitch errors rotate with the body frame rather than the reference frame.
     // todo: this should probably be a matrix that couples yaw as well.
     _rate_target_ang_vel.x += constrain_float(attitude_error_vector.y, -M_PI / 4, M_PI / 4) * _ahrs.get_gyro().z;
@@ -889,7 +910,7 @@ void AC_AttitudeControl::euler_rate_to_ang_vel(const Vector3f& euler_rad, const 
     ang_vel_rads.z = -sin_phi * euler_rate_rads.y + cos_theta * cos_phi * euler_rate_rads.z;
 }
 
-// Convert an angular velocity vector to a 321-intrinsic euler angle derivative
+// 将角速度矢量转换为321欧拉角导数 Convert an angular velocity vector to a 321-intrinsic euler angle derivative
 // Returns false if the vehicle is pitched 90 degrees up or down
 bool AC_AttitudeControl::ang_vel_to_euler_rate(const Vector3f& euler_rad, const Vector3f& ang_vel_rads, Vector3f& euler_rate_rads)
 {
@@ -906,6 +927,8 @@ bool AC_AttitudeControl::ang_vel_to_euler_rate(const Vector3f& euler_rad, const 
     euler_rate_rads.x = ang_vel_rads.x + sin_phi * (sin_theta / cos_theta) * ang_vel_rads.y + cos_phi * (sin_theta / cos_theta) * ang_vel_rads.z;
     euler_rate_rads.y = cos_phi * ang_vel_rads.y - sin_phi * ang_vel_rads.z;
     euler_rate_rads.z = (sin_phi / cos_theta) * ang_vel_rads.y + (cos_phi / cos_theta) * ang_vel_rads.z;
+
+
     return true;
 }
 

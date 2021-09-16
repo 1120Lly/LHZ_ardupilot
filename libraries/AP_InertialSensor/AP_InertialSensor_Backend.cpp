@@ -12,10 +12,7 @@
 
 const extern AP_HAL::HAL& hal;
 
-AP_InertialSensor_Backend::AP_InertialSensor_Backend(AP_InertialSensor &imu) :
-    _imu(imu)
-{
-}
+AP_InertialSensor_Backend::AP_InertialSensor_Backend(AP_InertialSensor &imu) : _imu(imu) { }
 
 /*
   notify of a FIFO reset so we don't use bad data to update observed sensor rate
@@ -84,47 +81,32 @@ void AP_InertialSensor_Backend::_update_sensor_rate(uint16_t &count, uint32_t &s
     }
 }
 
+// 旋转并校正加速度数据，这里获得的加速度数据已经转换为实际的重力加速度数据了
+// 使用此版本代码，加速校准总是在传感器坐标系内完成。这意味着我们在偏移和缩放之后应用旋转。
+// accel calibration is always done in sensor frame with this version of the code.
+// That means we apply the rotation after the offsets and scaling.
 void AP_InertialSensor_Backend::_rotate_and_correct_accel(uint8_t instance, Vector3f &accel) 
 {
-    /*
-      accel calibration is always done in sensor frame with this
-      version of the code. That means we apply the rotation after the
-      offsets and scaling.
-     */
-
-    // rotate for sensor orientation
-    accel.rotate(_imu._accel_orientation[instance]);
-    
-    // apply offsets
-    accel -= _imu._accel_offset[instance];
-
-    // apply scaling
-    const Vector3f &accel_scale = _imu._accel_scale[instance].get();
+    accel.rotate(_imu._accel_orientation[instance]);                   // 旋转到传感器的方向，旋转加速度数据
+    accel -= _imu._accel_offset[instance];                             // 应用偏移 apply offsets
+    const Vector3f &accel_scale = _imu._accel_scale[instance].get();   // 应用缩放 apply scaling
     accel.x *= accel_scale.x;
     accel.y *= accel_scale.y;
     accel.z *= accel_scale.z;
 
-    // rotate to body frame
-    if (_imu._board_orientation == ROTATION_CUSTOM && _imu._custom_rotation) {
-        accel = *_imu._custom_rotation * accel;
-    } else {
-        accel.rotate(_imu._board_orientation);
-    }
+    if (_imu._board_orientation == ROTATION_CUSTOM && _imu._custom_rotation)
+         {  accel = *_imu._custom_rotation * accel;  }                 // 旋转到机体坐标系 rotate to body frame
+    else {  accel.rotate(_imu._board_orientation);   }
 }
 
+// 旋转并校正陀螺仪数据
 void AP_InertialSensor_Backend::_rotate_and_correct_gyro(uint8_t instance, Vector3f &gyro) 
 {
-    // rotate for sensor orientation
-    gyro.rotate(_imu._gyro_orientation[instance]);
-    
-    // gyro calibration is always assumed to have been done in sensor frame
-    gyro -= _imu._gyro_offset[instance];
-
-    if (_imu._board_orientation == ROTATION_CUSTOM && _imu._custom_rotation) {
-        gyro = *_imu._custom_rotation * gyro;
-    } else {
-        gyro.rotate(_imu._board_orientation);
-    }
+    gyro.rotate(_imu._gyro_orientation[instance]);                     // 旋转到传感器的方向 rotate for sensor orientation
+    gyro -= _imu._gyro_offset[instance];                               // 陀螺仪的校准通常在传感器坐标系内完成
+    if (_imu._board_orientation == ROTATION_CUSTOM && _imu._custom_rotation)
+         {  gyro = *_imu._custom_rotation * gyro;   }
+    else {  gyro.rotate(_imu._board_orientation);   }
 }
 
 /*
@@ -283,36 +265,32 @@ void AP_InertialSensor_Backend::log_gyro_raw(uint8_t instance, const uint64_t sa
     }
 }
 
-/*
-  rotate accel vector, scale and add the accel offset
- */
+// 发布加速度，旋转加速矢量，缩放并添加加速偏移量 rotate accel vector, scale and add the accel offset
 void AP_InertialSensor_Backend::_publish_accel(uint8_t instance, const Vector3f &accel)
 {
-    if ((1U<<instance) & _imu.imu_kill_mask) {
-        return;
-    }
-    _imu._accel[instance] = accel;
+    if ((1U<<instance) & _imu.imu_kill_mask) {  return;  }
+    _imu._accel[instance] = accel;    // _imu._accel[instance]被发布出去，这个数据将会被用于之后的姿态解算和EKF处理
     _imu._accel_healthy[instance] = true;
 
-    // publish delta velocity
+    // 发布速度变化量 publish delta velocity
     _imu._delta_velocity[instance] = _imu._delta_velocity_acc[instance];
     _imu._delta_velocity_dt[instance] = _imu._delta_velocity_acc_dt[instance];
     _imu._delta_velocity_valid[instance] = true;
 
-
+    // 校准用的函数
     if (_imu._accel_calibrator != nullptr && _imu._accel_calibrator[instance].get_status() == ACCEL_CAL_COLLECTING_SAMPLE) {
         Vector3f cal_sample = _imu._delta_velocity[instance];
 
-        //remove rotation
+        // 删除旋转 remove rotation
         cal_sample.rotate_inverse(_imu._board_orientation);
 
-        // remove scale factors
+        // 删除缩放因子 remove scale factors
         const Vector3f &accel_scale = _imu._accel_scale[instance].get();
         cal_sample.x /= accel_scale.x;
         cal_sample.y /= accel_scale.y;
         cal_sample.z /= accel_scale.z;
         
-        //remove offsets
+        // 删除偏移 remove offsets
         cal_sample += _imu._accel_offset[instance].get() * _imu._delta_velocity_dt[instance] ;
 
         _imu._accel_calibrator[instance].new_sample(cal_sample, _imu._delta_velocity_dt[instance]);
@@ -540,26 +518,20 @@ void AP_InertialSensor_Backend::update_gyro(uint8_t instance)
     }
 }
 
-/*
-  common accel update function for all backends
- */
+// 更新加速度，针对所有后端的通用加速度更新功能 common accel update function for all backends
 void AP_InertialSensor_Backend::update_accel(uint8_t instance)
 {    
     WITH_SEMAPHORE(_sem);
 
-    if ((1U<<instance) & _imu.imu_kill_mask) {
-        return;
-    }
-    if (_imu._new_accel_data[instance]) {
-        _publish_accel(instance, _imu._accel_filtered[instance]);
-        _imu._new_accel_data[instance] = false;
-    }
+    if ((1U<<instance) & _imu.imu_kill_mask) { return; }
+    if (_imu._new_accel_data[instance])      {
+        _publish_accel(instance, _imu._accel_filtered[instance]); // 发布滤波后的数据，instance=0
+        _imu._new_accel_data[instance] = false;        }
     
-    // possibly update filter frequency
+    // 可能更新滤波器频率 possibly update filter frequency
     if (_last_accel_filter_hz != _accel_filter_cutoff()) {
         _imu._accel_filter[instance].set_cutoff_frequency(_accel_raw_sample_rate(instance), _accel_filter_cutoff());
-        _last_accel_filter_hz = _accel_filter_cutoff();
-    }
+        _last_accel_filter_hz = _accel_filter_cutoff();  }
 }
 
 bool AP_InertialSensor_Backend::should_log_imu_raw() const

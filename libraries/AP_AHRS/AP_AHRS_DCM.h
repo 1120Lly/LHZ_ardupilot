@@ -1,25 +1,5 @@
 #pragma once
-
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
- *  DCM based AHRS (Attitude Heading Reference System) interface for
- *  ArduPilot
- *
- */
+// DCM based AHRS (Attitude Heading Reference System) interface for ArduPilot
 
 class AP_AHRS_DCM : public AP_AHRS {
 public:
@@ -31,9 +11,8 @@ public:
         , _imu1_weight(0.5f)
     {
         _dcm_matrix.identity();
-
-        // these are experimentally derived from the simulator
-        // with large drift levels
+        // 这些都是从大漂移水平的模拟器中实验得出的
+        // these are experimentally derived from the simulator with large drift levels
         _ki = 0.0087f;
         _ki_yaw = 0.01f;
     }
@@ -44,9 +23,7 @@ public:
 
 
     // return the smoothed gyro vector corrected for drift
-    const Vector3f &get_gyro() const override {
-        return _omega;
-    }
+    const Vector3f &get_gyro() const override {  return _omega;  }
 
     // return rotation matrix representing rotaton from body to earth axes
     const Matrix3f &get_rotation_body_to_ned() const override {
@@ -128,11 +105,11 @@ private:
     // primary representation of attitude of flight vehicle body
     Matrix3f _body_dcm_matrix;
 
-    Vector3f _omega_P;                          // accel Omega proportional correction
+    Vector3f _omega_P;                          // 角加速度比例校正 accel Omega proportional correction
     Vector3f _omega_yaw_P;                      // proportional yaw correction
-    Vector3f _omega_I;                          // Omega Integrator correction
+    Vector3f _omega_I;                          // 角加速度积分校正 Omega Integrator correction
     Vector3f _omega_I_sum;
-    float _omega_I_sum_time;
+    float    _omega_I_sum_time;
     Vector3f _omega;                            // Corrected Gyro_Vector data
 
     // variables to cope with delaying the GA sum to match GPS lag
@@ -154,7 +131,7 @@ private:
     // time in millis when we last got a GPS heading
     uint32_t _gps_last_update;
 
-    // state of accel drift correction
+    // 加速度计漂移校正状态 state of accel drift correction
     Vector3f _ra_sum[INS_MAX_INSTANCES];
     Vector3f _last_velocity;
     float _ra_deltat;

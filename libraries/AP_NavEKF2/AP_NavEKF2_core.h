@@ -386,9 +386,9 @@ private:
 
     const AP_AHRS *_ahrs;
 
-    // the states are available in two forms, either as a Vector31, or
-    // broken down as individual elements. Both are equivalent (same
-    // memory)
+    // 状态有两种形式可用，要么作为三维向量，要么分解为单个元素，两者是等价的，使用相同的内存
+    // the states are available in two forms, either as a Vector3f, or broken down as individual elements.
+    // Both are equivalent (same memory)
     struct state_elements {
         Vector3f    angErr;         // 0..2
         Vector3f    velocity;       // 3..5
@@ -407,7 +407,7 @@ private:
         struct state_elements stateStruct;
     };
 
-    struct output_elements {
+    struct output_elements {        // ekf2输出的变量
         Quaternion  quat;           // 0..3
         Vector3f    velocity;       // 4..6
         Vector3f    position;       // 7..9

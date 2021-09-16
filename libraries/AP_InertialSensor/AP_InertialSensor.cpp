@@ -572,30 +572,22 @@ uint8_t AP_InertialSensor::register_accel(uint16_t raw_sample_rate_hz,
     return _accel_count++;
 }
 
-/*
- * Start all backends for gyro and accel measurements. It automatically calls
- * detect_backends() if it has not been called already.
- */
+// 启动陀螺仪和加速度测量的所有后端。如果没有，它会自动调用detect_backends()函数。
+// Start all backends for gyro and accel measurements. It automatically calls detect_backends() if it has not been called already.
 void AP_InertialSensor::_start_backends()
 
 {
-    detect_backends();
+    detect_backends();                         // 识别板子类型
 
-    for (uint8_t i = 0; i < _backend_count; i++) {
-        _backends[i]->start();
-    }
+    for (uint8_t i = 0; i < _backend_count; i++)
+    {   _backends[i]->start();   }             // 启动数据读取任务，重点看start
 
-    if (_gyro_count == 0 || _accel_count == 0) {
-        AP_HAL::panic("INS needs at least 1 gyro and 1 accel");
-    }
+    if (_gyro_count == 0 || _accel_count == 0)
+    {   AP_HAL::panic("INS needs at least 1 gyro and 1 accel");   }
 
-    // clear IDs for unused sensor instances
-    for (uint8_t i=get_accel_count(); i<INS_MAX_INSTANCES; i++) {
-        _accel_id[i].set(0);
-    }
-    for (uint8_t i=get_gyro_count(); i<INS_MAX_INSTANCES; i++) {
-        _gyro_id[i].set(0);
-    }
+                                               // 清除未使用的传感器实例的ID
+    for (uint8_t i=get_accel_count(); i<INS_MAX_INSTANCES; i++) {   _accel_id[i].set(0);   }
+    for (uint8_t i=get_gyro_count(); i<INS_MAX_INSTANCES; i++)  {   _gyro_id[i].set(0);    }
 }
 
 /* Find the N instance of the backend that has already been successfully detected */
@@ -621,28 +613,25 @@ AP_InertialSensor_Backend *AP_InertialSensor::_find_backend(int16_t backend_id, 
     return nullptr;
 }
 
-void
-AP_InertialSensor::init(uint16_t sample_rate)
+void AP_InertialSensor::init(uint16_t sample_rate)    // imu传感器数据初始化
 {
     // remember the sample rate
     _sample_rate = sample_rate;
-    _loop_delta_t = 1.0f / sample_rate;
+    _loop_delta_t = 1.0f / sample_rate;               // 采样频率转化成毫秒
 
     // we don't allow deltat values greater than 10x the normal loop
     // time to be exposed outside of INS. Large deltat values can
     // cause divergence of state estimators
     _loop_delta_t_max = 10 * _loop_delta_t;
 
-    if (_gyro_count == 0 && _accel_count == 0) {
-        _start_backends();
-    }
+    if (_gyro_count == 0 && _accel_count == 0)
+    {   _start_backends();   }                        // 在后端读取数据
 
-    // initialise accel scale if need be. This is needed as we can't
-    // give non-zero default values for vectors in AP_Param
+    // 如有需要，可初始化加速规模。这是必需的，因为我们不能在AP_Param中为向量提供非零的默认值
+    // initialise accel scale if need be. This is needed as we can't give non-zero default values for vectors in AP_Param
     for (uint8_t i=0; i<get_accel_count(); i++) {
-        if (_accel_scale[i].get().is_zero()) {
-            _accel_scale[i].set(Vector3f(1,1,1));
-        }
+        if (_accel_scale[i].get().is_zero())
+        {   _accel_scale[i].set(Vector3f(1,1,1));   }
     }
 
     // calibrate gyros unless gyro calibration has been disabled
@@ -1234,10 +1223,7 @@ void AP_InertialSensor::_save_gyro_calibration()
     }
 }
 
-
-/*
-  update gyro and accel values from backends
- */
+// imu数据更新，以400Hz的频率更新从后端产生的陀螺仪和加速度值 update gyro and accel values from backends
 void AP_InertialSensor::update(void)
 {
     // during initialisation update() may be called without
@@ -1255,7 +1241,7 @@ void AP_InertialSensor::update(void)
             _delta_angle_valid[i] = false;
         }
         for (uint8_t i=0; i<_backend_count; i++) {
-            _backends[i]->update();
+            _backends[i]->update();    // 数据更新，最后的数据在这里 _imu._accel_filtered[0].x
         }
 
         // clear accumulators
@@ -1824,9 +1810,8 @@ bool AP_InertialSensor::get_new_trim(float& trim_roll, float &trim_pitch)
     return false;
 }
 
-/*
-    Returns body fixed accelerometer level data averaged during accel calibration's first step
-*/
+// Returns body fixed accelerometer level data averaged during accel calibration's first step
+// 返回在加速度校准第一步中平均的机体固定加速度计水平数据
 bool AP_InertialSensor::get_fixed_mount_accel_cal_sample(uint8_t sample_num, Vector3f& ret) const
 {
     if (_accel_count <= (_acc_body_aligned-1) || _accel_calibrator[2].get_status() != ACCEL_CAL_SUCCESS || sample_num>=_accel_calibrator[2].get_num_samples_collected()) {
@@ -1841,9 +1826,8 @@ bool AP_InertialSensor::get_fixed_mount_accel_cal_sample(uint8_t sample_num, Vec
     return true;
 }
 
-/*
-    Returns Primary accelerometer level data averaged during accel calibration's first step
-*/
+// Returns Primary accelerometer level data averaged during accel calibration's first step
+// 返回在加速校准第一步中平均的主要加速度计水平数据
 bool AP_InertialSensor::get_primary_accel_cal_sample_avg(uint8_t sample_num, Vector3f& ret) const
 {
     uint8_t count = 0;

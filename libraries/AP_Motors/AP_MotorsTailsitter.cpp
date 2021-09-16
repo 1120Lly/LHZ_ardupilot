@@ -1,15 +1,19 @@
-//  AP_MotorsTailsitter.cpp - ArduCopter motors library for tailsitters and bicopters
+// 尾座式或矢量双旋翼
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
 #include "AP_MotorsTailsitter.h"
 #include <GCS_MAVLink/GCS.h>
 #include "AP_Motors_Class.h"
+#include <AP_NavEKF2/AP_NavEKF2_core.h>
+
+//#include <../ArduCopter/Copter.h>
 
 extern const AP_HAL::HAL& hal;
 #define SERVO_OUTPUT_RANGE  4500
+//extern Vector3f _now_gyrobias;
 
-// init
+// 初始化 init
 void AP_MotorsTailsitter::init(motor_frame_class frame_class, motor_frame_type frame_type)
 {
     // 设置默认的电机和伺服映射 setup default motor and servo mappings
@@ -48,6 +52,7 @@ void AP_MotorsTailsitter::init(motor_frame_class frame_class, motor_frame_type f
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_tiltTail, CH_7);
     SRV_Channels::set_angle(SRV_Channel::k_tiltTail, SERVO_OUTPUT_RANGE);
 
+    // 如果我们设置的是所需的机架类型，则记录成功的初始化
     // record successful initialisation if what we setup was the desired frame_class
     _flags.initialised_ok = (frame_class == MOTOR_FRAME_TAILSITTER);
 }
@@ -60,8 +65,8 @@ AP_MotorsTailsitter::AP_MotorsTailsitter(uint16_t loop_rate, uint16_t speed_hz) 
 // 设定电机的更新频率，舵机不用 set update rate to motors - a value in hertz
 void AP_MotorsTailsitter::set_update_rate(uint16_t speed_hz)
 {
-    _speed_hz = speed_hz;  // record requested speed
-    SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleLeft, speed_hz);
+    _speed_hz = speed_hz;  // 记录请求速度 record requested speed
+    SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleLeft , speed_hz);
     SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleRight, speed_hz);
     SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleTailL, speed_hz);
     SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleTailR, speed_hz);
@@ -133,7 +138,9 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     float   thr_adj = 0.0f;      // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
     float   rotate_angle;        // 旋转角输入值，最左为0，最右为1
     float   rate;                // 舵机俯仰控制权重，水平为0，朝下为1，朝上为-1
-    float   t_rate;              // 电机俯仰控制权重，水平为1，朝下为0，朝上为0
+//  float   t_rate;              // 电机俯仰控制权重，水平为1，朝下为0，朝上为0
+    float   m_rate;
+    float   s_rate;
 
     // 电压和气压补偿 apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
@@ -144,35 +151,48 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
 
     // 旋转角与俯仰控制权重
     rotate_angle= _rotate_radio_passthrough *2.0f - 1.0f;
+
     rate = rotate_angle;
     // 电机俯仰控制权重恒正
-    if (rate >= 0.0f) { t_rate= 1.0f -rate; }
-    if (rate <  0.0f) { t_rate= 1.0f +rate; }
+    if (rate >= 0.0f) {
+        m_rate= 1.0f -rate;
+        s_rate= rate;  }
+    if (rate <  0.0f) {
+        m_rate= 1.0f +rate;
+        s_rate=-rate;}
 
     // 安全检查，油门应当高于零，低于当前限制油门 sanity check throttle is above zero and below current limited throttle
     if (throttle_thrust <= 0.0f) {
         throttle_thrust = 0.0f;
         limit.throttle_lower = true;    }
     if (throttle_thrust >= _throttle_thrust_max) {
-        throttle_thrust = _throttle_thrust_max;
+        throttle_thrust  = _throttle_thrust_max;
         limit.throttle_upper = true;    }
 
     // 电机控制分配 calculate left and right throttle outputs
-    _thrust_left  =  throttle_thrust - t_rate *pitch_thrust *0.5f - roll_thrust *0.5f;
-    _thrust_right =  throttle_thrust - t_rate *pitch_thrust *0.5f + roll_thrust *0.5f;
-    _thrust_taill =  throttle_thrust + t_rate *pitch_thrust *0.5f ;
-    _thrust_tailr =  throttle_thrust + t_rate *pitch_thrust *0.5f ;
+    _thrust_left  =  throttle_thrust - m_rate *pitch_thrust *0.4f - roll_thrust *0.45f;
+    _thrust_right =  throttle_thrust - m_rate *pitch_thrust *0.4f + roll_thrust *0.45f;
+    _thrust_taill =  throttle_thrust + m_rate *pitch_thrust *0.6f ;
+    _thrust_tailr =  throttle_thrust + m_rate *pitch_thrust *0.6f ;
+
+    // 航向控制在大角度时适度减弱
+    yaw_thrust = yaw_thrust *0.3f - s_rate *yaw_thrust *0.1f;
 
     // 舵机控制分配，向上和向下的俯仰控制参与者不同
-    if (rotate_angle >= 0.0f)  {
-        _tilt_left    = -rotate_angle *0.5f - yaw_thrust *0.4f;
-        _tilt_right   =  rotate_angle *0.5f - yaw_thrust *0.4f;
-        _tilt_tail    =  rotate_angle *0.5f - rate *pitch_thrust *0.4f; }
-    if (rotate_angle < 0.0f)   {
-        _tilt_left    = -rotate_angle *0.5f - rate *pitch_thrust *0.4f - yaw_thrust *0.4f;
-        _tilt_right   =  rotate_angle *0.5f + rate *pitch_thrust *0.4f - yaw_thrust *0.4f;
-        _tilt_tail    =  rotate_angle *0.5f ; }
 
+    if (rotate_angle >= 0.0f)  {
+        _tilt_left    = -rotate_angle *0.5f - yaw_thrust;
+        _tilt_right   =  rotate_angle *0.5f - yaw_thrust;
+        _tilt_tail    =  rotate_angle *0.5f - s_rate *pitch_thrust *0.4f; }
+    if (rotate_angle < 0.0f)   {
+        _tilt_left    = -rotate_angle *0.5f + s_rate *pitch_thrust *0.3f - yaw_thrust;
+        _tilt_right   =  rotate_angle *0.5f - s_rate *pitch_thrust *0.3f - yaw_thrust;
+        _tilt_tail    =  rotate_angle *0.5f ; }
+    /*
+    _tilt_left    = -rotate_angle *0.5f ;
+    _tilt_right   =  rotate_angle *0.5f ;
+    _tilt_tail    =  rotate_angle *0.5f ;
+    */
     // 如果最大推力大于1，则降低平均油门 if max thrust is more than one, reduce average throttle
     thrust_max = MAX(_thrust_right,_thrust_left);
     if (thrust_max > 1.0f) {

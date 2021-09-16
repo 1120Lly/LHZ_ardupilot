@@ -167,6 +167,7 @@ void Copter::fast_loop()
     // 接着运行EKF状态估计器----------- run EKF state estimator (expensive)
     read_AHRS();
 
+
 #if FRAME_CONFIG == HELI_FRAME
     update_heli_control_dynamics();
     #if MODE_AUTOROTATE_ENABLED == ENABLED
@@ -196,28 +197,21 @@ void Copter::fast_loop()
     }
 }
 
-// rc_loops - reads user input from transmitter/receiver
-// called at 100hz
+// rc_loops - reads user input from transmitter/receiver - called at 100hz
 void Copter::rc_loop()
 {
-    // Read radio and 3-position switch on radio
-    // -----------------------------------------
-    read_radio();
-    rc().read_mode_switch();
+    read_radio();  // Read radio and 3-position switch on radio
+    rc().read_mode_switch(); // pass_gyro_bias();
+    // ahrs.update_orientation(); // 解锁前后持续100hz运行 make it possible to change ahrs orientation at runtime during initial config
 }
 
 // throttle_loop - should be run at 50 hz
-// ---------------------------
 void Copter::throttle_loop()
 {
     // update throttle_low_comp value (controls priority of throttle vs attitude control)
     update_throttle_mix();
-
     // check auto_armed status
     update_auto_armed();
-
-    // make it possible to change ahrs orientation at runtime during initial config
-    ahrs.update_orientation();
 
 #if FRAME_CONFIG == HELI_FRAME
     // update rotor speed
@@ -229,12 +223,10 @@ void Copter::throttle_loop()
 
     // compensate for ground effect (if enabled)
     update_ground_effect_detector();
-
     update_dynamic_notch();
 }
 
-// update_batt_compass - read battery and compass
-// should be called at 10hz
+// update_batt_compass - read battery and compass - should be called at 10hz
 void Copter::update_batt_compass(void)
 {
     // read battery before compass because it may be used for motor interference compensation
@@ -253,12 +245,10 @@ void Copter::update_batt_compass(void)
 void Copter::fourhundred_hz_logging()
 {
     if (should_log(MASK_LOG_ATTITUDE_FAST) && !copter.flightmode->logs_attitude()) {
-        Log_Write_Attitude();
-    }
+        Log_Write_Attitude();    }
 }
 
-// ten_hz_logging_loop
-// should be run at 10hz
+// ten_hz_logging_loop - should be run at 10hz
 void Copter::ten_hz_logging_loop()
 {
     // log attitude data if we're not already logging at the higher rate
@@ -274,9 +264,8 @@ void Copter::ten_hz_logging_loop()
     }
     if (should_log(MASK_LOG_RCIN)) {
         logger.Write_RCIN();
-        if (rssi.enabled()) {
-            logger.Write_RSSI();
-        }
+        if (rssi.enabled())      {
+            logger.Write_RSSI(); }
     }
     if (should_log(MASK_LOG_RCOUT)) {
         logger.Write_RCOUT();
@@ -311,12 +300,10 @@ void Copter::twentyfive_hz_logging()
 
 #if HIL_MODE == HIL_MODE_DISABLED
     if (should_log(MASK_LOG_ATTITUDE_FAST)) {
-        Log_Write_EKF_POS();
-    }
+        Log_Write_EKF_POS();                }
 
     if (should_log(MASK_LOG_IMU)) {
-        logger.Write_IMU();
-    }
+        logger.Write_IMU();       }
 #endif
 
 #if PRECISION_LANDING == ENABLED
@@ -337,7 +324,6 @@ void Copter::three_hz_loop()
 {
     // check if we've lost contact with the ground station
     failsafe_gcs_check();
-
     // check if we've lost terrain data
     failsafe_terrain_check();
 
@@ -346,25 +332,25 @@ void Copter::three_hz_loop()
     fence_check();
 #endif // AC_FENCE_ENABLED
 
-    // update ch6 in flight tuning
-    tuning();
+    tuning(); // update ch6 in flight tuning
 }
 
 // one_hz_loop - runs at 1Hz
 void Copter::one_hz_loop()
 {
+    // 给地面站发送当前高度数据，危险的严重性，%.1fm表示输出小数点后1位的浮点小数
+    // gcs().send_text(MAV_SEVERITY_CRITICAL,  "Current altitude: %.1fm",  copter.flightmode->get_alt_above_ground_cm() / 100.0f);
+
     if (should_log(MASK_LOG_ANY)) {
-        Log_Write_Data(DATA_AP_STATE, ap.value);
-    }
+        Log_Write_Data(DATA_AP_STATE, ap.value);    }
 
     arming.update();
 
     if (!motors->armed()) {
-        // make it possible to change ahrs orientation at runtime during initial config
-        //ahrs.update_orientation();
+        // 自定义旋转原本所在的位置 make it possible to change ahrs orientation at runtime during initial config
+        ahrs.update_orientation();
 
         update_using_interlock();
-
         // check the user hasn't updated the frame class or type
         motors->set_frame_class_and_type((AP_Motors::motor_frame_class)g2.frame_class.get(), (AP_Motors::motor_frame_type)g.frame_type.get());
 
@@ -376,7 +362,6 @@ void Copter::one_hz_loop()
 
     // update assigned functions and enable auxiliary servos
     SRV_Channels::enable_aux_servos();
-
     // log terrain data
     terrain_logging();
 
@@ -408,7 +393,7 @@ void Copter::update_GPS(void)
 #if CAMERA == ENABLED
         camera.update();
 #endif
-    }
+                     }
 }
 
 void Copter::init_simple_bearing()

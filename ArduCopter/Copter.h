@@ -222,6 +222,7 @@ public:
     void setup() override;
     void loop() override;
 
+
 private:
     static const AP_FWVersion fwver;
 
@@ -411,7 +412,8 @@ private:
     } sensor_health;
 
     // Motor Output
-    MOTOR_CLASS *motors;
+    //MOTOR_CLASS *motors;
+    AP_MotorsMulticopter *motors;
     const struct AP_Param::GroupInfo *motors_var_info;
 
     int32_t _home_bearing;
@@ -980,9 +982,10 @@ private:
 public:
     void mavlink_delay_cb();    // GCS_Mavlink.cpp
     void failsafe_check();      // failsafe.cpp
+
 };
 
 extern Copter copter;
-
+//extern Vector3f _now_gyrobias;
 using AP_HAL::millis;
 using AP_HAL::micros;

@@ -162,10 +162,11 @@ void AP_AHRS::init()
 #endif
 }
 
+// 使用最新的INS数据返回一个平滑和校正的陀螺矢量，可能还没有被EKF使用
+// 经研究，此函数仅在AP_AHRS_View中被同名函数调用，关系单纯，不易混淆
 // return a smoothed and corrected gyro vector using the latest ins data (which may not have been consumed by the EKF yet)
 Vector3f AP_AHRS::get_gyro_latest(void) const
-{
-    const uint8_t primary_gyro = get_primary_gyro_index();
+{   const uint8_t primary_gyro = get_primary_gyro_index();
     return AP::ins().get_gyro(primary_gyro) + get_gyro_drift();
 }
 
@@ -218,23 +219,20 @@ void AP_AHRS::add_trim(float roll_in_radians, float pitch_in_radians, bool save_
 // 这里是关键：更新飞控板安装旋转角
 void AP_AHRS::update_orientation()
 {
-    float board_rotate = RC_Channels::get_radio_in(CH_6);
-    board_rotate= (board_rotate -1500) *0.15; // 这里决定着倾斜角最大能转多少度
+//    float board_rotate = RC_Channels::get_radio_in(CH_6);
+//    board_rotate= (board_rotate -1500) *0.2f; // 这里决定着倾斜角最大能转多少度
     const enum Rotation orientation = (enum Rotation)_board_orientation.get();
+
     if (orientation != ROTATION_CUSTOM)
-    {
-        AP::ins().set_board_orientation(orientation);
-        if (_compass != nullptr) {
-               _compass->set_board_orientation(orientation);    }
-    }
+    {   AP::ins().set_board_orientation(orientation);
+        if (_compass != nullptr) { _compass->set_board_orientation(orientation); }    }
+
     else //自定义旋转，使用自定义俯仰角度
-    {
-        _custom_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
-        //_custom_rotation.from_euler(radians(_custom_roll), radians(_custom_pitch), radians(_custom_yaw));
+    {   // _custom_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
+        _custom_rotation.from_euler(radians(_custom_roll), radians(_custom_pitch), radians(_custom_yaw));
         AP::ins().set_board_orientation(orientation, &_custom_rotation);
         if (_compass != nullptr) {
-            _compass->set_board_orientation(orientation, &_custom_rotation);     }
-    }
+            _compass->set_board_orientation(orientation, &_custom_rotation);     }    }
 }
 
 // return a ground speed estimate in m/s
@@ -505,20 +503,12 @@ float AP_AHRS::get_EAS2TAS(void) const {
 void AP_AHRS::update_nmea_out()
 {
 #if !HAL_MINIMIZE_FEATURES && AP_AHRS_NAVEKF_AVAILABLE
-    if (_nmea_out != nullptr) {
-        _nmea_out->update();
-    }
+    if (_nmea_out != nullptr) {  _nmea_out->update();  }
 #endif
 }
 
 // singleton instance
 AP_AHRS *AP_AHRS::_singleton;
 
-namespace AP {
-
-AP_AHRS &ahrs()
-{
-    return *AP_AHRS::get_singleton();
-}
-
-}
+namespace AP {  AP_AHRS &ahrs()
+{  return *AP_AHRS::get_singleton();  }  }

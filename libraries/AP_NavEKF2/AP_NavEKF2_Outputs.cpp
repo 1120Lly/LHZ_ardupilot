@@ -114,7 +114,6 @@ bool NavEKF2_core::getHeightControlLimit(float &height) const
     }
 }
 
-
 // return the Euler roll, pitch and yaw angle in radians
 void NavEKF2_core::getEulerAngles(Vector3f &euler) const
 {
@@ -125,20 +124,14 @@ void NavEKF2_core::getEulerAngles(Vector3f &euler) const
 // return body axis gyro bias estimates in rad/sec
 void NavEKF2_core::getGyroBias(Vector3f &gyroBias) const
 {
-    if (dtEkfAvg < 1e-6f) {
-        gyroBias.zero();
-        return;
-    }
+    if (dtEkfAvg < 1e-6f) {  gyroBias.zero();  return;  }
     gyroBias = stateStruct.gyro_bias / dtEkfAvg;
 }
 
 // return body axis gyro scale factor error as a percentage
 void NavEKF2_core::getGyroScaleErrorPercentage(Vector3f &gyroScale) const
 {
-    if (!statesInitialised) {
-        gyroScale.x = gyroScale.y = gyroScale.z = 0;
-        return;
-    }
+    if (!statesInitialised) {  gyroScale.x = gyroScale.y = gyroScale.z = 0;  return;  }
     gyroScale.x = 100.0f/stateStruct.gyro_scale.x - 100.0f;
     gyroScale.y = 100.0f/stateStruct.gyro_scale.y - 100.0f;
     gyroScale.z = 100.0f/stateStruct.gyro_scale.z - 100.0f;

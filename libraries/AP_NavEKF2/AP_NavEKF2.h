@@ -38,6 +38,7 @@ class NavEKF2 {
     friend class NavEKF2_core;
 
 public:
+    // static Vector3f _now_gyrobias;
     NavEKF2(const AP_AHRS *ahrs, const RangeFinder &rng);
 
     /* Do not allow copies */

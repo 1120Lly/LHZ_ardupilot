@@ -31,7 +31,7 @@
 /// @class      AP_MotorsMulticopter
 class AP_MotorsMulticopter : public AP_Motors {
 public:
-
+    static Vector3f temp_gyrobias;
     // Constructor
     AP_MotorsMulticopter(uint16_t loop_rate, uint16_t speed_hz = AP_MOTORS_SPEED_DEFAULT);
 
@@ -197,4 +197,5 @@ protected:
 
     // array of motor output values
     float _actuator[AP_MOTORS_MAX_NUM_MOTORS];
+
 };
