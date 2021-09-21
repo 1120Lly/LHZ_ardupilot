@@ -41,23 +41,25 @@ void AP_AHRS_View::set_pitch_trim(float trim_deg) {
 
 // update state
 void AP_AHRS_View::update()
-{
-    rot_body_to_ned = ahrs.get_rotation_body_to_ned();
-    gyro = ahrs.get_gyro();
+{   Matrix3f board_rotation;
+    float board_rotate = RC_Channels::get_radio_in(CH_6);       // 获取遥控器第6通道信号
+    board_rotate= (board_rotate -1500) *0.2f;                   // 转换为最大倾斜角度
+    board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
 
-    if (!is_zero(y_angle + _pitch_trim_deg)) {
-        rot_body_to_ned = rot_body_to_ned * rot_view_T;
-        gyro = rot_view * gyro;
-    }
+    rot_body_to_ned = ahrs.get_rotation_body_to_ned();
+    gyro = ahrs.get_gyro();                                     // 在AP_AHRS中虚定义初始值为0
+    if (!is_zero(y_angle + _pitch_trim_deg))
+    {   rot_body_to_ned = rot_body_to_ned * rot_view_T;
+        gyro = rot_view * gyro;   }
+
+    gyro = gyro * board_rotation;                               // 新加语句，陀螺仪数据进行自定义俯仰角度旋转
 
     rot_body_to_ned.to_euler(&roll, &pitch, &yaw);
 
     roll_sensor  = degrees(roll) * 100;
     pitch_sensor = degrees(pitch) * 100;
     yaw_sensor   = degrees(yaw) * 100;
-    if (yaw_sensor < 0) {
-        yaw_sensor += 36000;
-    }
+    if (yaw_sensor < 0) {  yaw_sensor += 36000;  }
 
     ahrs.calc_trig(rot_body_to_ned,
                    trig.cos_roll, trig.cos_pitch, trig.cos_yaw,
@@ -65,10 +67,17 @@ void AP_AHRS_View::update()
 }
 
 // return a smoothed and corrected gyro vector using the latest ins data (which may not have been consumed by the EKF yet)
-Vector3f AP_AHRS_View::get_gyro_latest(void) const {
-    Vector3f gyro_latest = ahrs.get_gyro_latest();
-    gyro_latest.rotate(rotation);
-    return gyro_latest;
+Vector3f AP_AHRS_View::get_gyro_latest(void) const 
+{   // 此处对get_gyro_latest进行俯仰旋转，经测试验证，方法可行且稳定，可用于姿态角速率控制
+    Matrix3f board_rotation;
+    Vector3f gyro_latest = ahrs.get_gyro_latest();              // 获取最新的陀螺仪数据
+    float board_rotate = RC_Channels::get_radio_in(CH_6);       // 获取遥控器第6通道信号
+    board_rotate= (board_rotate -1500) *0.2f;                   // 转换为最大倾斜角度
+    board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
+
+    gyro_latest.rotate(rotation);                               // 陀螺仪数据进行原本程序的角度旋转
+    gyro_latest = gyro_latest * board_rotation;                 // 陀螺仪数据进行自定义俯仰角度旋转
+    return gyro_latest;                                         // 返回处理后的陀螺仪数据
 }
 
 // rotate a 2D vector from earth frame to body frame

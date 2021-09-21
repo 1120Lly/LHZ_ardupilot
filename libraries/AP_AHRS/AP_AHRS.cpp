@@ -1,23 +1,5 @@
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
+//  NavEKF based AHRS (Attitude Heading Reference System) interface for ArduPilot
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
- *  NavEKF based AHRS (Attitude Heading Reference System) interface for
- *  ArduPilot
- *
- */
 #include <AP_HAL/AP_HAL.h>
 #include "AP_AHRS.h"
 #include "AP_AHRS_View.h"
@@ -253,17 +235,13 @@ const Vector3f &AP_AHRS::get_gyro(void) const
 
 const Matrix3f &AP_AHRS::get_rotation_body_to_ned(void) const
 {
-    if (active_EKF_type() == EKFType::NONE) {
-        return AP_AHRS_DCM::get_rotation_body_to_ned();
-    }
+    if (active_EKF_type() == EKFType::NONE) {  return AP_AHRS_DCM::get_rotation_body_to_ned();  }
     return _dcm_matrix;
 }
 
 const Vector3f &AP_AHRS::get_gyro_drift(void) const
 {
-    if (active_EKF_type() == EKFType::NONE) {
-        return AP_AHRS_DCM::get_gyro_drift();
-    }
+    if (active_EKF_type() == EKFType::NONE) {  return AP_AHRS_DCM::get_gyro_drift();  }
     return _gyro_drift;
 }
 

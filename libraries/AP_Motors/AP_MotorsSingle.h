@@ -11,7 +11,7 @@
 #define AP_MOTORS_SING_POSITIVE      1
 #define AP_MOTORS_SING_NEGATIVE     -1
 
-#define NUM_ACTUATORS 4
+#define NUM_SERVOS 3
 
 #define AP_MOTORS_SINGLE_SPEED_DIGITAL_SERVOS 250 // update rate for digital servos
 #define AP_MOTORS_SINGLE_SPEED_ANALOG_SERVOS 125  // update rate for analog servos
@@ -56,6 +56,6 @@ protected:
     void                output_armed_stabilizing() override;
 
     int16_t             _throttle_radio_output;   // total throttle pwm value, summed onto throttle channel minimum, typically ~1100-1900
-    float               _actuator_out[NUM_ACTUATORS]; // combined roll, pitch, yaw and throttle outputs to motors in 0~1 range
+    float               _actuator_out[NUM_SERVOS]; // combined roll, pitch, yaw and throttle outputs to motors in 0~1 range
     float               _thrust_out;
 };
