@@ -39,7 +39,7 @@ public:
 
     enum Flags {
         //注意：此处将永久使用EKF标志位改为0，原本是 FLAG_ALWAYS_USE_EKF = 0x1,
-        FLAG_ALWAYS_USE_EKF = 0x0,
+        FLAG_ALWAYS_USE_EKF = 0x1,
     };
 
     // Constructor
