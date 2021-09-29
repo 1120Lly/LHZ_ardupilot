@@ -28,18 +28,14 @@ void AP_MotorsCoax::set_update_rate(uint16_t speed_hz)               // 设置�
 }
 
 void AP_MotorsCoax::output_to_motors()
-{
+{   for (uint8_t i = 0; i < NUM_ACTUATORS; i++) 
+        { rc_write_angle(AP_MOTORS_MOT_1 + i, _actuator_out[i] * AP_MOTORS_COAX_SERVO_INPUT_RANGE); }
+        
     switch (_spool_state) {
         case SpoolState::SHUT_DOWN:                                  // 关机，发送最小值
-            for (uint8_t i = 0; i < NUM_ACTUATORS; i++) 
-            { rc_write_angle(AP_MOTORS_MOT_1 + i, _actuator_out[i] * AP_MOTORS_COAX_SERVO_INPUT_RANGE); }
-            rc_write_angle(AP_MOTORS_MOT_1, _roll_radio_passthrough  * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
-            rc_write_angle(AP_MOTORS_MOT_2, _pitch_radio_passthrough * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
             rc_write(AP_MOTORS_MOT_3, output_to_pwm(0));
             rc_write(AP_MOTORS_MOT_4, output_to_pwm(0));        break;
         case SpoolState::GROUND_IDLE:                                // 地面闲置，解锁但没飞行时发送输出
-            for (uint8_t i = 0; i < NUM_ACTUATORS; i++) 
-            { rc_write_angle(AP_MOTORS_MOT_1 + i, _actuator_out[i] * AP_MOTORS_COAX_SERVO_INPUT_RANGE); }
             set_actuator_with_slew(_actuator[3], actuator_spin_up_to_ground_idle());
             set_actuator_with_slew(_actuator[4], actuator_spin_up_to_ground_idle());
             rc_write(AP_MOTORS_MOT_3, output_to_pwm(_actuator[3]));
@@ -47,8 +43,6 @@ void AP_MotorsCoax::output_to_motors()
         case SpoolState::SPOOLING_UP:
         case SpoolState::THROTTLE_UNLIMITED:                         // 油门不限制
         case SpoolState::SPOOLING_DOWN:                              // 根据推力要求发送输出
-            for (uint8_t i = 0; i < NUM_ACTUATORS; i++) 
-            { rc_write_angle(AP_MOTORS_MOT_1 + i, _actuator_out[i] * AP_MOTORS_COAX_SERVO_INPUT_RANGE); }
             set_actuator_with_slew(_actuator[3], thrust_to_actuator(_thrust_yt_ccw));
             set_actuator_with_slew(_actuator[4], thrust_to_actuator(_thrust_yt_cw ));
             rc_write(AP_MOTORS_MOT_3, output_to_pwm(_actuator[3]));

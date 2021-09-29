@@ -1,22 +1,4 @@
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
- *       AP_MotorsTailsitter.cpp - ArduCopter motors library for tailsitters and bicopters
- *
- */
+//  AP_MotorsTailsitter.cpp - ArduCopter motors library for tailsitters and bicopters
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
@@ -111,8 +93,7 @@ void AP_MotorsTailsitter::output_to_motors()
     SRV_Channels::set_output_scaled(SRV_Channel::k_throttle, _actuator[2]*100);
 
     SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorLeft, _tilt_left*SERVO_OUTPUT_RANGE);
-    SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorRight, _tilt_right*SERVO_OUTPUT_RANGE);
-
+    SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorRight, _tilt_right*SERVO_OUTPUT_RANGE); 
 }
 
 // get_motor_mask - returns a bitmask of which outputs are being used for motors (1 means being used)
@@ -143,6 +124,9 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     float   throttle_thrust;            // throttle thrust input value, 0.0 - 1.0
     float   thrust_max;                 // highest motor value
     float   thr_adj = 0.0f;             // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
+    float   forw_thrust;
+    float   turn_thrust;
+    float   mode = RC_Channels::get_radio_in(CH_5);
 
     // apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
@@ -150,6 +134,8 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     pitch_thrust = _pitch_in + _pitch_in_ff;
     yaw_thrust = _yaw_in + _yaw_in_ff;
     throttle_thrust = get_throttle() * compensation_gain;
+    forw_thrust= _pitch_radio_passthrough;
+    turn_thrust= _yaw_radio_passthrough;
 
     // sanity check throttle is above zero and below current limited throttle
     if (throttle_thrust <= 0.0f) {
@@ -182,8 +168,12 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     _throttle_out = _throttle / compensation_gain;
 
     // thrust vectoring
+    if (mode < 1500)  {
     _tilt_left  = pitch_thrust - yaw_thrust;
-    _tilt_right = pitch_thrust + yaw_thrust;
+    _tilt_right = pitch_thrust + yaw_thrust;  }
+    if (mode >= 1500)  {
+    _tilt_left  = forw_thrust - turn_thrust;
+    _tilt_right = forw_thrust + turn_thrust;  }
 }
 
 // output_test_seq - spin a motor at the pwm value specified
@@ -192,30 +182,13 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
 void AP_MotorsTailsitter::output_test_seq(uint8_t motor_seq, int16_t pwm)
 {
     // exit immediately if not armed
-    if (!armed()) {
-        return;
-    }
-
+    if (!armed()) {  return;  }
     // output to motors and servos
     switch (motor_seq) {
-        case 1:
-            // right throttle
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, pwm);
-            break;
-        case 2:
-            // right tilt servo
-            SRV_Channels::set_output_pwm(SRV_Channel::k_tiltMotorRight, pwm);
-            break;
-        case 3:
-            // left throttle
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, pwm);
-            break;
-        case 4:
-            // left tilt servo
-            SRV_Channels::set_output_pwm(SRV_Channel::k_tiltMotorLeft, pwm);
-            break;
-        default:
-            // do nothing
-            break;
+        case 1:  SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, pwm);  break;
+        case 2:  SRV_Channels::set_output_pwm(SRV_Channel::k_tiltMotorRight, pwm); break;
+        case 3:  SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, pwm);   break;
+        case 4:  SRV_Channels::set_output_pwm(SRV_Channel::k_tiltMotorLeft, pwm);  break;
+        default:               break;
     }
 }
