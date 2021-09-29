@@ -31,13 +31,15 @@ void AP_MotorsCoax::output_to_motors()
 {
     switch (_spool_state) {
         case SpoolState::SHUT_DOWN:                                  // 关机，发送最小值
+            for (uint8_t i = 0; i < NUM_ACTUATORS; i++) 
+            { rc_write_angle(AP_MOTORS_MOT_1 + i, _actuator_out[i] * AP_MOTORS_COAX_SERVO_INPUT_RANGE); }
             rc_write_angle(AP_MOTORS_MOT_1, _roll_radio_passthrough  * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
             rc_write_angle(AP_MOTORS_MOT_2, _pitch_radio_passthrough * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
             rc_write(AP_MOTORS_MOT_3, output_to_pwm(0));
             rc_write(AP_MOTORS_MOT_4, output_to_pwm(0));        break;
         case SpoolState::GROUND_IDLE:                                // 地面闲置，解锁但没飞行时发送输出
             for (uint8_t i = 0; i < NUM_ACTUATORS; i++) 
-            { rc_write_angle(AP_MOTORS_MOT_1 + i, _spin_up_ratio * _actuator_out[i] * AP_MOTORS_COAX_SERVO_INPUT_RANGE); }
+            { rc_write_angle(AP_MOTORS_MOT_1 + i, _actuator_out[i] * AP_MOTORS_COAX_SERVO_INPUT_RANGE); }
             set_actuator_with_slew(_actuator[3], actuator_spin_up_to_ground_idle());
             set_actuator_with_slew(_actuator[4], actuator_spin_up_to_ground_idle());
             rc_write(AP_MOTORS_MOT_3, output_to_pwm(_actuator[3]));
@@ -129,11 +131,11 @@ void AP_MotorsCoax::output_armed_stabilizing()
     // 执行器偏角与操纵力矩成正比，与油门成反比，即油门越大，偏角越小
     _actuator_out[0] = roll_thrust / thrust_out_actuator;
     _actuator_out[1] = pitch_thrust / thrust_out_actuator;
-    if (fabsf(_actuator_out[0]) > 1.0f) {
-        limit.roll = true;
+
+    // 限制最大绝对值，并规范化
+    if (fabsf(_actuator_out[0]) > 1.0f) {  limit.roll = true;
         _actuator_out[0] = constrain_float(_actuator_out[0], -1.0f, 1.0f);  }
-    if (fabsf(_actuator_out[1]) > 1.0f) {
-        limit.pitch = true;
+    if (fabsf(_actuator_out[1]) > 1.0f) {  limit.pitch = true;
         _actuator_out[1] = constrain_float(_actuator_out[1], -1.0f, 1.0f);  }
 }
 

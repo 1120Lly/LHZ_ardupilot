@@ -37,10 +37,7 @@ class AP_AHRS : public AP_AHRS_DCM {
     friend class AP_AHRS_View;
 public:
 
-    enum Flags {
-        //注意：此处将永久使用EKF标志位改为0，原本是 FLAG_ALWAYS_USE_EKF = 0x1,
-        FLAG_ALWAYS_USE_EKF = 0x1,
-    };
+    enum Flags {  FLAG_ALWAYS_USE_EKF = 0x1,  };
 
     // Constructor
     AP_AHRS(uint8_t flags = 0);

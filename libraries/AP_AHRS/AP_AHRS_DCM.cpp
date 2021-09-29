@@ -993,20 +993,6 @@ void AP_AHRS_DCM::estimate_wind(void)
 // calculate the euler angles and DCM matrix which will be used for high level
 // navigation control. Apply trim such that a positive trim value results in a
 // positive vehicle rotation about that axis (ie a negative offset)
-// void AP_AHRS_DCM::euler_angles(void)
-// {   // 此处提供了一种俯仰旋转的语法，经测试验证，方法可行且稳定，可用于姿态控制
-    // Matrix3f board_rotation;
-    // float board_rotate = RC_Channels::get_radio_in(CH_6);
-    // board_rotate= (board_rotate -1500) *0.2f; // 这里决定着倾斜角最大能转多少度
-    // board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
-    
-    // _body_dcm_matrix = _dcm_matrix * AP::ahrs().get_rotation_vehicle_body_to_autopilot_body();
-    // _body_dcm_matrix = _body_dcm_matrix * board_rotation;
-    // _body_dcm_matrix.to_euler(&roll, &pitch, &yaw);
-
-    // update_cd_values();
-// }
-
 void AP_AHRS_DCM::euler_angles(void)
 {   _body_dcm_matrix = _dcm_matrix * AP::ahrs().get_rotation_vehicle_body_to_autopilot_body();
     _body_dcm_matrix.to_euler(&roll, &pitch, &yaw);
