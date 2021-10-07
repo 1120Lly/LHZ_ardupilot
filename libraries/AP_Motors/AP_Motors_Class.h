@@ -210,10 +210,8 @@ protected:
 
     // add a motor to the motor map
     void add_motor_num(int8_t motor_num);
-    
     // update the throttle input filter
     virtual void update_throttle_filter() = 0;
-
     // save parameters as part of disarming
     virtual void save_params_on_disarm() {}
 
@@ -244,7 +242,6 @@ protected:
 
     // air pressure compensation variables
     float               _air_density_ratio;     // air density / sea level density - decreases in altitude
-
     // mask of what channels need fast output
     uint16_t            _motor_fast_mask;
 
@@ -253,7 +250,6 @@ protected:
     float _pitch_radio_passthrough;    // pitch input from pilot in -1 ~ +1 range.  used for setup and providing servo feedback while landed
     float _throttle_radio_passthrough; // throttle/collective input from pilot in 0 ~ 1 range.  used for setup and providing servo feedback while landed
     float _yaw_radio_passthrough;      // yaw input from pilot in -1 ~ +1 range.  used for setup and providing servo feedback while landed
-
     AP_Int8             _pwm_type;            // PWM output type
 
     // motor failure handling

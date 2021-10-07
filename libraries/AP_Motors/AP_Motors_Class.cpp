@@ -1,23 +1,4 @@
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
- *       AP_Motors.cpp - ArduCopter motors library
- *       Code by RandyMackay. DIYDrones.com
- *
- */
+//   AP_Motors.cpp - ArduCopter motors library
 
 #include "AP_Motors_Class.h"
 #include <AP_HAL/AP_HAL.h>
@@ -74,19 +55,15 @@ void AP_Motors::set_desired_spool_state(DesiredSpoolState spool)
 
 // pilot input in the -1 ~ +1 range for roll, pitch and yaw. 0~1 range for throttle
 void AP_Motors::set_radio_passthrough(float roll_input, float pitch_input, float throttle_input, float yaw_input)
-{
-    _roll_radio_passthrough = roll_input;
+{   _roll_radio_passthrough = roll_input;
     _pitch_radio_passthrough = pitch_input;
     _throttle_radio_passthrough = throttle_input;
     _yaw_radio_passthrough = yaw_input;
 }
 
-/*
-  write to an output channel
- */
+// write to an output channel
 void AP_Motors::rc_write(uint8_t chan, uint16_t pwm)
-{
-    SRV_Channel::Aux_servo_function_t function = SRV_Channels::get_motor_function(chan);
+{   SRV_Channel::Aux_servo_function_t function = SRV_Channels::get_motor_function(chan);
     SRV_Channels::set_output_pwm(function, pwm);
 }
 

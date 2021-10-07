@@ -124,11 +124,15 @@ void SRV_Channel::aux_servo_function_setup(void)
     case k_elevon_right:
     case k_vtail_left:
     case k_vtail_right:
+    case k_tiltLeft:
+    case k_tiltRight:
+    case k_tiltTail:
         set_angle(4500);
         break;
     case k_throttle:
     case k_throttleLeft:
     case k_throttleRight:
+    case k_throttleTail:
         // fixed wing throttle
         set_range(100);
         break;

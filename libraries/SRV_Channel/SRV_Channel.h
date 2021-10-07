@@ -156,6 +156,10 @@ public:
         k_ProfiLED_2            = 130,
         k_ProfiLED_3            = 131,
         k_ProfiLED_Clock        = 132,
+        k_throttleTail          = 133,
+        k_tiltLeft              = 134,
+        k_tiltRight             = 135,
+        k_tiltTail              = 136,
         k_nr_aux_servo_functions         ///< This must be the last enum value (only add new values _before_ this one)
     } Aux_servo_function_t;
 
