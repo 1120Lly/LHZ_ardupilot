@@ -1,25 +1,6 @@
-/*
- *       APM_AHRS_DCM.cpp
- *
- *       AHRS system using DCM matrices
- *
- *       Based on DCM code by Doug Weibel, Jordi Munoz and Jose Julio. DIYDrones.com
- *
- *       Adapted for the general ArduPilot AHRS interface by Andrew Tridgell
+// APM_AHRS_DCM.cpp
+// AHRS system using DCM matrices
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
 #include "AP_AHRS.h"
 #include <AP_HAL/AP_HAL.h>
 #include <GCS_MAVLink/GCS.h>
@@ -40,14 +21,12 @@ extern const AP_HAL::HAL& hal;
 
 // reset the current gyro drift estimate
 //  should be called if gyro offsets are recalculated
-void
-AP_AHRS_DCM::reset_gyro_drift(void)
+void AP_AHRS_DCM::reset_gyro_drift(void)
 {
     _omega_I.zero();
     _omega_I_sum.zero();
     _omega_I_sum_time = 0;
 }
-
 
 /* if this was a watchdog reset then get home from backup registers */
 void AP_AHRS_DCM::load_watchdog_home()
@@ -64,8 +43,7 @@ void AP_AHRS_DCM::load_watchdog_home()
 }
 
 // run a full DCM update round
-void
-AP_AHRS_DCM::update(bool skip_ins_update)
+void AP_AHRS_DCM::update(bool skip_ins_update)
 {
     // support locked access functions to AHRS data
     WITH_SEMAPHORE(_rsem);
@@ -1012,8 +990,14 @@ void AP_AHRS_DCM::estimate_wind(void)
 // positive vehicle rotation about that axis (ie a negative offset)
 void
 AP_AHRS_DCM::euler_angles(void)
-{
+{   // 此处提供了一种俯仰旋转的语法，经测试验证，方法可行且稳定，可用于姿态控制
+    Matrix3f board_rotation;
+    float board_rotate = RC_Channels::get_radio_in(CH_6);
+    board_rotate= (board_rotate -1500) *0.2f; // 这里决定着倾斜角最大能转多少度
+    board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
+
     _body_dcm_matrix = _dcm_matrix * get_rotation_vehicle_body_to_autopilot_body();
+    _body_dcm_matrix = _body_dcm_matrix * board_rotation;
     _body_dcm_matrix.to_euler(&roll, &pitch, &yaw);
 
     update_cd_values();

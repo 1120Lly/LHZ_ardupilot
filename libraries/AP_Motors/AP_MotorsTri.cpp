@@ -5,15 +5,12 @@
 #include <GCS_MAVLink/GCS.h>
 #include "AP_MotorsTri.h"
 #include "AP_Motors_Class.h"
-
 extern const AP_HAL::HAL& hal;
 #define SERVO_OUTPUT_RANGE  4500
 
 // init
 void AP_MotorsTri::init(motor_frame_class frame_class, motor_frame_type frame_type)
-{
-    // 设置默认的电机和伺服映射 setup default motor and servo mappings
-    uint8_t chan;
+{   uint8_t chan;     // 设置默认的电机和伺服映射
 
     // k_motor1 throttleLeft  左电机   73  1
     // k_motor2 throttleRight 右电机   74  3
@@ -36,9 +33,7 @@ void AP_MotorsTri::init(motor_frame_class frame_class, motor_frame_type frame_ty
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_tiltTail, CH_6);
     SRV_Channels::set_angle(SRV_Channel::k_tiltTail, SERVO_OUTPUT_RANGE);
 
-    // 记录初始化成功
-    // record successful initialisation if what we setup was the desired frame_class
-     _flags.initialised_ok = (frame_class == MOTOR_FRAME_TRI);
+    _flags.initialised_ok = (frame_class == MOTOR_FRAME_TRI); // 记录初始化成功
 }
 
 // 申请线程，以一定频率调用 Constructor
@@ -48,9 +43,7 @@ AP_MotorsMulticopter(loop_rate, speed_hz) { set_update_rate(speed_hz); }
 // set update rate to motors - a value in hertz
 void AP_MotorsTri::set_update_rate(uint16_t speed_hz)
 {
-    // record requested speed
-    _speed_hz = speed_hz;
-
+    _speed_hz = speed_hz; // record requested speed
     // set update rate for the 3 motors (but not the servo on channel 7)
     SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleLeft , speed_hz);
     SRV_Channels::set_rc_frequency(SRV_Channel::k_throttleRight, speed_hz);
@@ -60,7 +53,6 @@ void AP_MotorsTri::set_update_rate(uint16_t speed_hz)
 void AP_MotorsTri::output_to_motors()
 {
     if (!_flags.initialised_ok) { return; }
-
     switch (_spool_state) {
         case SpoolState::SHUT_DOWN:
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, get_pwm_output_min());
@@ -80,8 +72,7 @@ void AP_MotorsTri::output_to_motors()
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, output_to_pwm(thrust_to_actuator(_thrust_left)));
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, output_to_pwm(thrust_to_actuator(_thrust_right)));
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTail, output_to_pwm(thrust_to_actuator(_thrust_tail)));
-            break;
-    }
+            break;    }
     // 始终输出给倾转舵机 Always output to tilt servos
     SRV_Channels::set_output_scaled(SRV_Channel::k_tiltLeft, _tilt_left*SERVO_OUTPUT_RANGE);
     SRV_Channels::set_output_scaled(SRV_Channel::k_tiltRight, _tilt_right*SERVO_OUTPUT_RANGE);
@@ -128,7 +119,6 @@ void AP_MotorsTri::output_armed_stabilizing()
     throttle_thrust = get_throttle() * compensation_gain;
    
     // 旋转角与俯仰控制权重
-    // rotate_angle= rotate_angle *2.0f - 1.0f;
     rotate_angle = RC_Channels::get_radio_in(CH_6);          // 获取遥控器第6通道信号
     rotate_angle= (rotate_angle -1500) *0.002f;              // 转换为标准值
     rate = rotate_angle;
@@ -142,34 +132,38 @@ void AP_MotorsTri::output_armed_stabilizing()
     { throttle_thrust = _throttle_thrust_max; limit.throttle_upper = true; }
 
     // 电机控制分配 calculate left and right throttle outputs
-    _thrust_left  =  throttle_thrust - m_rate *pitch_thrust *0.4f - roll_thrust *0.45f;
-    _thrust_right =  throttle_thrust - m_rate *pitch_thrust *0.4f + roll_thrust *0.45f;
-    _thrust_tail =  throttle_thrust + m_rate *pitch_thrust *0.6f ;
+    _thrust_left  =  throttle_thrust - m_rate *pitch_thrust *0.4f + roll_thrust *0.45f;
+    _thrust_right =  throttle_thrust - m_rate *pitch_thrust *0.4f - roll_thrust *0.45f;
+    _thrust_tail  =  throttle_thrust + m_rate *pitch_thrust *0.6f ;
 
     // 航向控制在大角度时适度减弱
     //yaw_thrust = yaw_thrust *0.3f - s_rate *yaw_thrust *0.1f;
 
     // 舵机控制分配，向上和向下的俯仰控制参与者不同
-    if (rotate_angle >= 0.0f)  {
-        _tilt_left    = -rotate_angle *0.6f - yaw_thrust;
-        _tilt_right   =  rotate_angle *0.6f - yaw_thrust;
-        _tilt_tail    =  rotate_angle *0.6f - s_rate *pitch_thrust *0.4f; }
-    if (rotate_angle < 0.0f)   {
-        _tilt_left    = -rotate_angle *0.6f + s_rate *pitch_thrust *0.3f - yaw_thrust;
-        _tilt_right   =  rotate_angle *0.6f - s_rate *pitch_thrust *0.3f - yaw_thrust;
-        _tilt_tail    =  rotate_angle *0.6f ; }
+    // if (rotate_angle <= 0.0f)  {
+    //     _tilt_left    = -rotate_angle *0.6f - yaw_thrust *0.3f;
+    //     _tilt_right   =  rotate_angle *0.6f - yaw_thrust *0.3f;
+    //     _tilt_tail    =  rotate_angle *0.6f - s_rate *pitch_thrust *0.4f; }
+    // if (rotate_angle > 0.0f)   {
+    //     _tilt_left    = -rotate_angle *0.6f + s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
+    //     _tilt_right   =  rotate_angle *0.6f - s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
+    //     _tilt_tail    =  rotate_angle *0.6f ; }
 
+    _tilt_left    = -rotate_angle *0.6f - s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
+    _tilt_right   =  rotate_angle *0.6f + s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
+    _tilt_tail    =  rotate_angle *0.6f - s_rate *pitch_thrust *0.4f;
+                
+    // 用于检测舵机变姿倾转极限位置
     // _tilt_left    = -rotate_angle *0.6f ;
     // _tilt_right   =  rotate_angle *0.6f ;
     // _tilt_tail    =  rotate_angle *0.6f ;
 
-   // 如果最大推力大于1，则降低平均油门 if max thrust is more than one, reduce average throttle
+   // 如果最大推力大于1，则降低平均油门
     thrust_max = MAX(_thrust_right,_thrust_left);
     if (thrust_max > 1.0f) { thr_adj = 1.0f - thrust_max;
     limit.throttle_upper = true; limit.roll = true; limit.pitch = true; }
 
-    // 增加调整以减少平均油门 Add adjustment to reduce average throttle
-    // 补偿增益永远不会为零 compensation_gain can never be zero
+    // 应用调整以降低平均油门
     _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
     _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
     _thrust_tail  = constrain_float(_thrust_tail  + thr_adj, 0.0f, 1.0f);
@@ -195,4 +189,3 @@ void AP_MotorsTri::output_test_seq(uint8_t motor_seq, int16_t pwm)
         default: break;
     }
 }
-

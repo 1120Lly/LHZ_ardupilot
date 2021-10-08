@@ -118,7 +118,6 @@ public:
     };
 
     void set_desired_spool_state(enum DesiredSpoolState spool);
-
     enum DesiredSpoolState get_desired_spool_state(void) const { return _spool_desired; }
 
     // spool states
@@ -131,8 +130,7 @@ public:
     };
 
     // get_spool_state - get current spool state
-    enum SpoolState  get_spool_state(void) const { return _spool_state; }
-
+    enum SpoolState     get_spool_state(void) const { return _spool_state; }
     // set_density_ratio - sets air density as a proportion of sea level density
     void                set_air_density_ratio(float ratio) { _air_density_ratio = ratio; }
 
@@ -148,22 +146,16 @@ public:
     // set limit flag for pitch, roll and yaw
     void set_limit_flag_pitch_roll_yaw(bool flag);
 
-    //
     // virtual functions that should be implemented by child classes
-    //
 
     // set update rate to motors - a value in hertz
     virtual void        set_update_rate( uint16_t speed_hz ) { _speed_hz = speed_hz; }
-
     // init
     virtual void        init(motor_frame_class frame_class, motor_frame_type frame_type) = 0;
-
     // set frame class (i.e. quad, hexa, heli) and type (i.e. x, plus)
     virtual void        set_frame_class_and_type(motor_frame_class frame_class, motor_frame_type frame_type) = 0;
-
     // output - sends commands to the motors
     virtual void        output() = 0;
-
     // output_min - sends minimum values out to the motors
     virtual void        output_min() = 0;
 
@@ -178,7 +170,6 @@ public:
 
     // pilot input in the -1 ~ +1 range for roll, pitch and yaw. 0~1 range for throttle
     void                set_radio_passthrough(float roll_input, float pitch_input, float throttle_input, float yaw_input);
-
     // set loop rate. Used to support loop rate as a parameter
     void                set_loop_rate(uint16_t loop_rate) { _loop_rate = loop_rate; }
 
@@ -261,6 +252,4 @@ private:
     static AP_Motors *_singleton;
 };
 
-namespace AP {
-    AP_Motors *motors();
-};
+namespace AP { AP_Motors *motors(); };
