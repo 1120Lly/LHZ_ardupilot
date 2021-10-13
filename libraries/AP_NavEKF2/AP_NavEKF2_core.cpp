@@ -606,21 +606,16 @@ void NavEKF2_core::UpdateFilter(bool predict)
     hal.scheduler->restore_interrupts(istate);
 #endif
 
-    /*
-      this is a check to cope with a vehicle sitting idle on the
-      ground and getting over-confident of the state. The symptoms
-      would be "gyros still settling" when the user tries to arm. In
-      that state the EKF can't recover, so we do a hard reset and let
-      it try again.
-     */
+    // 这是一种应对闲置在地面上的车辆和对政府过度自信的检查。当用户试图解锁时，症状表现可能
+    // 是“陀螺仪仍然稳定”。在这种状态下，EKF无法恢复，所以我们做一个强制重置，让它再试一次。
+    // this is a check to cope with a vehicle sitting idle(闲置) on the ground and getting over-confident of the state. The symptoms
+    // would be "gyros still settling" when the user tries to arm. In that state the EKF can't recover, so we do a hard reset and let it try again.
     if (filterStatus.value != 0) {
-        last_filter_ok_ms = AP_HAL::millis();
-    }
-    if (filterStatus.value == 0 &&
-        last_filter_ok_ms != 0 &&
-        AP_HAL::millis() - last_filter_ok_ms > 5000 &&
-        !hal.util->get_soft_armed()) {
-        // we've been unhealthy for 5 seconds after being healthy, reset the filter
+        last_filter_ok_ms = AP_HAL::millis(); }
+    // 解锁前不要旋转变姿，否则会导致EKF强制重置，EKF关系到的内容太多，为了飞行安全，不能关闭这一重置机制
+    if (filterStatus.value == 0 && last_filter_ok_ms != 0 &&
+        AP_HAL::millis() - last_filter_ok_ms > 2000 && !hal.util->get_soft_armed()) {
+        // we've been unhealthy for n seconds after being healthy, reset the filter
         gcs().send_text(MAV_SEVERITY_WARNING, "EKF2 IMU%u forced reset",(unsigned)imu_index);
         last_filter_ok_ms = 0;
         statesInitialised = false;

@@ -175,9 +175,22 @@ void AP_AHRS_NavEKF::update_EKF2(void)
             Vector3f eulers;
             EKF2.getRotationBodyToNED(_dcm_matrix);
             EKF2.getEulerAngles(-1,eulers);
+
+            // Matrix3f board_rotation;
+            // Matrix3f wuji_euler;
+            // float board_rotate = RC_Channels::get_radio_in(CH_6);
+            // board_rotate= (board_rotate -1500) *0.2f;            // 这里决定着倾斜角最大能转多少弧度
+            // board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
+
+            // eulers = eulers * board_rotation;            
+
             roll  = eulers.x;
             pitch = eulers.y;
             yaw   = eulers.z;
+
+            // wuji_euler.from_euler(roll, pitch, yaw);
+            // wuji_euler = wuji_euler * board_rotation;            // 俯仰变姿测试成功
+            // wuji_euler.to_euler(&roll, &pitch, &yaw);
 
             update_cd_values();
             update_trig();
@@ -194,14 +207,19 @@ void AP_AHRS_NavEKF::update_EKF2(void)
             _gyro_drift = -_gyro_drift;
 
             // calculate corrected gyro estimate for get_gyro()
-            _gyro_estimate.zero();
-            if (primary_imu == -1 || !_ins.get_gyro_health(primary_imu)) {
-                // the primary IMU is undefined so use an uncorrected default value from the INS library
-                _gyro_estimate = _ins.get_gyro();
-            } else {
-                // use the same IMU as the primary EKF and correct for gyro drift
-                _gyro_estimate = _ins.get_gyro(primary_imu) + _gyro_drift;
-            }
+            Matrix3f board_rotation;
+            float board_rotate = RC_Channels::get_radio_in(CH_6);
+            board_rotate= (board_rotate -1500) *0.2f;    // 这里决定着倾斜角最大能转多少度
+            board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
+            _gyro_estimate.zero();                       // 归零
+            // the primary IMU is undefined so use an uncorrected default value from the INS library
+            if (primary_imu == -1 || !_ins.get_gyro_health(primary_imu)) 
+            { _gyro_estimate = _ins.get_gyro(); }        // 旋转陀螺仪关键还是在这里
+            // use the same IMU as the primary EKF and correct for gyro drift
+            else { _gyro_estimate = _ins.get_gyro(primary_imu) + _gyro_drift; }
+            _gyro_estimate = _gyro_estimate * board_rotation;
+
+
 
             // get z accel bias estimate from active EKF (this is usually for the primary IMU)
             float abias = 0;

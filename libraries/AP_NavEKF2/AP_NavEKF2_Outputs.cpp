@@ -118,7 +118,15 @@ bool NavEKF2_core::getHeightControlLimit(float &height) const
 // return the Euler roll, pitch and yaw angle in radians
 void NavEKF2_core::getEulerAngles(Vector3f &euler) const
 {
+    Matrix3f board_rotation;
+    Matrix3f wuji_euler;
+    float board_rotate = RC_Channels::get_radio_in(CH_6);
+    board_rotate= (board_rotate -1500) *0.2f;            // 这里决定着倾斜角最大能转多少弧度
+    board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
     outputDataNew.quat.to_euler(euler.x, euler.y, euler.z);
+    wuji_euler.from_euler(euler.x, euler.y, euler.z);
+    wuji_euler = wuji_euler * board_rotation;            // 俯仰变姿测试成功
+    wuji_euler.to_euler(&euler.x, &euler.y, &euler.z);
     euler = euler - _ahrs->get_trim();
 }
 
