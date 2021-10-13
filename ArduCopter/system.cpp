@@ -328,33 +328,33 @@ void Copter::update_dynamic_notch()
 // position_ok - returns true if the horizontal absolute position is ok and home position is set
 bool Copter::position_ok() const
 {
-    // return false if ekf failsafe has triggered
-    if (failsafe.ekf) {
-        return false;
-    }
+    // 如果触发ekf失效，则返回false return false if ekf failsafe has triggered 
+    // 这里可以考虑注释掉
+    // if (failsafe.ekf) { return false; }
 
     // check ekf position estimate
     return (ekf_position_ok() || optflow_position_ok());
 }
 
 // ekf_position_ok - returns true if the ekf claims it's horizontal absolute position estimate is ok and home position is set
+// 如果ekf声称它的水平绝对位置估计是可以的，并且home位置已经设置，则返回true
 bool Copter::ekf_position_ok() const
 {
-    if (!ahrs.have_inertial_nav()) {
-        // do not allow navigation with dcm position
-        return false;
-    }
+    // 不允许使用DCM位置导航 do not allow navigation with dcm position 
+    // 这里可以考虑注释掉
+    // if (!ahrs.have_inertial_nav()) { return false; }
+    
+    // EKF使用过滤器状态和EKF检查 with EKF use filter status and ekf check
+    // nav_filter_status filt_status = inertial_nav.get_filter_status();
 
-    // with EKF use filter status and ekf check
-    nav_filter_status filt_status = inertial_nav.get_filter_status();
-
-    // if disarmed we accept a predicted horizontal position
-    if (!motors->armed()) {
-        return ((filt_status.flags.horiz_pos_abs || filt_status.flags.pred_horiz_pos_abs));
-    } else {
-        // once armed we require a good absolute position and EKF must not be in const_pos_mode
-        return (filt_status.flags.horiz_pos_abs && !filt_status.flags.const_pos_mode);
-    }
+    // 如果解锁，我们接受预期的水平位置 if disarmed we accept a predicted horizontal position
+    // if (!motors->armed()) {
+    //     return ((filt_status.flags.horiz_pos_abs || filt_status.flags.pred_horiz_pos_abs));
+    // } else {
+    //     // once armed we require a good absolute position and EKF must not be in const_pos_mode
+    //     return (filt_status.flags.horiz_pos_abs && !filt_status.flags.const_pos_mode);
+    // }
+    return true;
 }
 
 // optflow_position_ok - returns true if optical flow based position estimate is ok

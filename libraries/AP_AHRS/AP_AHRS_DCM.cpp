@@ -1003,8 +1003,7 @@ AP_AHRS_DCM::euler_angles(void)
     update_cd_values();
 }
 
-// return our current position estimate using
-// dead-reckoning or GPS
+// return our current position estimate using dead-reckoning or GPS
 bool AP_AHRS_DCM::get_position(struct Location &loc) const
 {
     loc.lat = _last_lat;

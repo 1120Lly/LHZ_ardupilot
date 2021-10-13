@@ -48,7 +48,7 @@ public:
         return _omega;
     }
 
-    // return rotation matrix representing rotaton from body to earth axes
+    // 返回从机体到地面的旋转矩阵 return rotation matrix representing rotaton from body to earth axes
     const Matrix3f &get_rotation_body_to_ned() const override {
         return _body_dcm_matrix;
     }

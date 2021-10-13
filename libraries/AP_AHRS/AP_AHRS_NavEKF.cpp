@@ -1,23 +1,4 @@
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
- *  NavEKF based AHRS (Attitude Heading Reference System) interface for
- *  ArduPilot
- *
- */
+//  NavEKF based AHRS (Attitude Heading Reference System) interface for ArduPilot
 #include <AP_HAL/AP_HAL.h>
 #include "AP_AHRS.h"
 #include "AP_AHRS_View.h"
@@ -56,10 +37,8 @@ const Vector3f &AP_AHRS_NavEKF::get_gyro(void) const
 }
 
 const Matrix3f &AP_AHRS_NavEKF::get_rotation_body_to_ned(void) const
-{
-    if (!active_EKF_type()) {
-        return AP_AHRS_DCM::get_rotation_body_to_ned();
-    }
+{   if (!active_EKF_type()) 
+    { return AP_AHRS_DCM::get_rotation_body_to_ned(); }
     return _dcm_matrix;
 }
 
@@ -1181,7 +1160,10 @@ bool AP_AHRS_NavEKF::get_filter_status(nav_filter_status &status) const
 {
     switch (ekf_type()) {
     case EKF_TYPE_NONE:
-        return false;
+        return false;                       // 以防影响过多，还原为原始程序
+    // default:
+    //     EKF2.getFilterStatus(-1,status); // 新加语句，将滤波改为正常状态
+    //     return true;
 
     case EKF_TYPE2:
     default:

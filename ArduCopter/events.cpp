@@ -280,6 +280,7 @@ void Copter::gpsglitch_check()
     // get filter status
     nav_filter_status filt_status = inertial_nav.get_filter_status();
     bool gps_glitching = filt_status.flags.gps_glitching;
+    // bool gps_glitching = 0;  // 暂时赋值为0，即GPS不处于故障状态
 
     // log start or stop of gps glitch.  AP_Notify update is handled from within AP_AHRS
     if (ap.gps_glitching != gps_glitching) {
