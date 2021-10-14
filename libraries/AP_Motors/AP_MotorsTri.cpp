@@ -1,5 +1,4 @@
 // 无极六自由度矢量变姿系列飞行器，机型选择7
-
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
 #include <GCS_MAVLink/GCS.h>
@@ -99,17 +98,16 @@ uint16_t AP_MotorsTri::get_motor_mask()
 // includes new scaling stability patch
 void AP_MotorsTri::output_armed_stabilizing()
 {
-    float   roll_thrust;                // roll thrust input value, +/- 1.0
-    float   pitch_thrust;               // pitch thrust input value, +/- 1.0
-    float   yaw_thrust;                 // yaw thrust input value, +/- 1.0
-    float   throttle_thrust;            // throttle thrust input value, 0.0 - 1.0
+    float   roll_thrust;         // roll thrust input value, +/- 1.0
+    float   pitch_thrust;        // pitch thrust input value, +/- 1.0
+    float   yaw_thrust;          // yaw thrust input value, +/- 1.0
+    float   throttle_thrust;     // throttle thrust input value, 0.0 - 1.0
     float   thrust_max;          // highest motor value
     float   thr_adj = 0.0f;      // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
     float   rotate_angle;        // 旋转角输入值，最左为0，最右为1
-    float   rate;                // 舵机俯仰控制权重，水平为0，朝下为1，朝上为-1
-//  float   t_rate;              // 电机俯仰控制权重，水平为1，朝下为0，朝上为0
-    float   m_rate;
-    float   s_rate;
+    float   rate;                // 俯仰控制权重，水平为0，朝下为1，朝上为-1
+    float   m_rate;              // 电机俯仰控制权重，水平为1，朝下为0，朝上为0
+    float   s_rate;              // 舵机俯仰控制权重，水平为0，朝下为1，朝上为1
 
     // apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
@@ -137,18 +135,9 @@ void AP_MotorsTri::output_armed_stabilizing()
     _thrust_tail  =  throttle_thrust + m_rate *pitch_thrust *0.6f ;
 
     // 航向控制在大角度时适度减弱
-    //yaw_thrust = yaw_thrust *0.3f - s_rate *yaw_thrust *0.1f;
+     yaw_thrust = yaw_thrust - s_rate *yaw_thrust *0.4f;
 
-    // 舵机控制分配，向上和向下的俯仰控制参与者不同
-    // if (rotate_angle <= 0.0f)  {
-    //     _tilt_left    = -rotate_angle *0.6f - yaw_thrust *0.3f;
-    //     _tilt_right   =  rotate_angle *0.6f - yaw_thrust *0.3f;
-    //     _tilt_tail    =  rotate_angle *0.6f - s_rate *pitch_thrust *0.4f; }
-    // if (rotate_angle > 0.0f)   {
-    //     _tilt_left    = -rotate_angle *0.6f + s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
-    //     _tilt_right   =  rotate_angle *0.6f - s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
-    //     _tilt_tail    =  rotate_angle *0.6f ; }
-
+    // 舵机控制分配（小飞机）
     _tilt_left    = -rotate_angle *0.6f - s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
     _tilt_right   =  rotate_angle *0.6f + s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
     _tilt_tail    =  rotate_angle *0.6f - s_rate *pitch_thrust *0.4f;

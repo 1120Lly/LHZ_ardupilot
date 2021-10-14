@@ -1,15 +1,11 @@
 #include <AP_HAL/AP_HAL.h>
-
 #include "AP_NavEKF2.h"
 #include "AP_NavEKF2_core.h"
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_Vehicle/AP_Vehicle.h>
 #include <AP_GPS/AP_GPS.h>
-
 #include <stdio.h>
-
 extern const AP_HAL::HAL& hal;
-
 
 // Check basic filter health metrics and return a consolidated health status
 bool NavEKF2_core::healthy(void) const
@@ -114,19 +110,11 @@ bool NavEKF2_core::getHeightControlLimit(float &height) const
     }
 }
 
-
+// 如果需要EKF变姿，则需要旋转此处欧拉角
 // return the Euler roll, pitch and yaw angle in radians
 void NavEKF2_core::getEulerAngles(Vector3f &euler) const
 {
-    Matrix3f board_rotation;
-    Matrix3f wuji_euler;
-    float board_rotate = RC_Channels::get_radio_in(CH_6);
-    board_rotate= (board_rotate -1500) *0.2f;            // 这里决定着倾斜角最大能转多少弧度
-    board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
     outputDataNew.quat.to_euler(euler.x, euler.y, euler.z);
-    wuji_euler.from_euler(euler.x, euler.y, euler.z);
-    wuji_euler = wuji_euler * board_rotation;            // 俯仰变姿测试成功
-    wuji_euler.to_euler(&euler.x, &euler.y, &euler.z);
     euler = euler - _ahrs->get_trim();
 }
 
@@ -135,8 +123,7 @@ void NavEKF2_core::getGyroBias(Vector3f &gyroBias) const
 {
     if (dtEkfAvg < 1e-6f) {
         gyroBias.zero();
-        return;
-    }
+        return; }
     gyroBias = stateStruct.gyro_bias / dtEkfAvg;
 }
 
@@ -145,8 +132,7 @@ void NavEKF2_core::getGyroScaleErrorPercentage(Vector3f &gyroScale) const
 {
     if (!statesInitialised) {
         gyroScale.x = gyroScale.y = gyroScale.z = 0;
-        return;
-    }
+        return; }
     gyroScale.x = 100.0f/stateStruct.gyro_scale.x - 100.0f;
     gyroScale.y = 100.0f/stateStruct.gyro_scale.y - 100.0f;
     gyroScale.z = 100.0f/stateStruct.gyro_scale.z - 100.0f;

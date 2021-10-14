@@ -1,23 +1,4 @@
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
- *  NavEKF based AHRS (Attitude Heading Reference System) interface for
- *  ArduPilot
- *
- */
+// NavEKF based AHRS (Attitude Heading Reference System) interface for ArduPilot
 #include <AP_HAL/AP_HAL.h>
 #include "AP_AHRS.h"
 #include "AP_AHRS_View.h"
@@ -28,7 +9,6 @@
 #include <AP_Baro/AP_Baro.h>
 
 #if AP_AHRS_NAVEKF_AVAILABLE
-
 #define ATTITUDE_CHECK_THRESH_ROLL_PITCH_RAD radians(10)
 #define ATTITUDE_CHECK_THRESH_YAW_RAD radians(20)
 
@@ -42,41 +22,28 @@ AP_AHRS_NavEKF::AP_AHRS_NavEKF(NavEKF2 &_EKF2,
     EKF2(_EKF2),
     EKF3(_EKF3),
     _ekf_flags(flags)
-{
-    _dcm_matrix.identity();
-}
+{   _dcm_matrix.identity(); }
 
 // return the smoothed gyro vector corrected for drift
 const Vector3f &AP_AHRS_NavEKF::get_gyro(void) const
 {
-    // 经排查，这里修改语法不对，导致陀螺仪输出一组夸张的定值
-    // Vector3f wuji_get_gyro;
-    // Matrix3f board_rotation;
-    // float board_rotate = RC_Channels::get_radio_in(CH_6);
-    // board_rotate= (board_rotate -1500) *0.2f; // 这里决定着倾斜角最大能转多少度
-    // board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
-
-    if (!active_EKF_type()) { return AP_AHRS_DCM::get_gyro(); }
-    // wuji_get_gyro = _gyro_estimate;
-
-    // _gyro_estimate = board_rotation * _gyro_estimate; // * board_rotation;
-    return _gyro_estimate;
+    return AP_AHRS_DCM::get_gyro();
+    // if (!active_EKF_type()) { return AP_AHRS_DCM::get_gyro(); }
+    // return _gyro_estimate;
 }
 
 const Matrix3f &AP_AHRS_NavEKF::get_rotation_body_to_ned(void) const
 {
-    if (!active_EKF_type()) {
-        return AP_AHRS_DCM::get_rotation_body_to_ned();
-    }
-    return _dcm_matrix;
+    return AP_AHRS_DCM::get_rotation_body_to_ned();
+    // if (!active_EKF_type()) { return AP_AHRS_DCM::get_rotation_body_to_ned(); }
+    // return _dcm_matrix;
 }
 
 const Vector3f &AP_AHRS_NavEKF::get_gyro_drift(void) const
 {
-    if (!active_EKF_type()) {
-        return AP_AHRS_DCM::get_gyro_drift();
-    }
-    return _gyro_drift;
+    return AP_AHRS_DCM::get_gyro_drift();
+    // if (!active_EKF_type()) { return AP_AHRS_DCM::get_gyro_drift(); }
+    // return _gyro_drift;
 }
 
 // reset the current gyro drift estimate
@@ -85,12 +52,8 @@ void AP_AHRS_NavEKF::reset_gyro_drift(void)
 {
     // support locked access functions to AHRS data
     WITH_SEMAPHORE(_rsem);
-    
-    // update DCM
-    AP_AHRS_DCM::reset_gyro_drift();
-
-    // reset the EKF gyro bias states
-    EKF2.resetGyroBias();
+    AP_AHRS_DCM::reset_gyro_drift(); // update DCM
+    EKF2.resetGyroBias(); // reset the EKF gyro bias states
     EKF3.resetGyroBias();
 }
 
@@ -98,15 +61,11 @@ void AP_AHRS_NavEKF::update(bool skip_ins_update)
 {
     // support locked access functions to AHRS data
     WITH_SEMAPHORE(_rsem);
-    
     // drop back to normal priority if we were boosted by the INS
     // calling delay_microseconds_boost()
     hal.scheduler->boost_end();
-    
     // EKF1 is no longer supported - handle case where it is selected
-    if (_ekf_type == 1) {
-        _ekf_type.set(2);
-    }
+    if (_ekf_type == 1) { _ekf_type.set(2); }
 
     update_DCM(skip_ins_update);
 
@@ -114,16 +73,12 @@ void AP_AHRS_NavEKF::update(bool skip_ins_update)
     update_SITL();
 #endif
 
-    if (_ekf_type == 2) {
-        // if EK2 is primary then run EKF2 first to give it CPU
-        // priority
+    if (_ekf_type == 2) { // if EK2 is primary then run EKF2 first to give it CPU priority
         update_EKF2();
+        update_EKF3();  } 
+    else {  // otherwise run EKF3 first
         update_EKF3();
-    } else {
-        // otherwise run EKF3 first
-        update_EKF3();
-        update_EKF2();
-    }
+        update_EKF2();  }
 
 #if AP_MODULE_SUPPORTED
     // call AHRS_update hook if any
@@ -133,13 +88,11 @@ void AP_AHRS_NavEKF::update(bool skip_ins_update)
     // push gyros if optical flow present
     if (hal.opticalflow) {
         const Vector3f &exported_gyro_bias = get_gyro_drift();
-        hal.opticalflow->push_gyro_bias(exported_gyro_bias.x, exported_gyro_bias.y);
-    }
+        hal.opticalflow->push_gyro_bias(exported_gyro_bias.x, exported_gyro_bias.y); }
 
     if (_view != nullptr) {
         // update optional alternative attitude view
-        _view->update(skip_ins_update);
-    }
+        _view->update(skip_ins_update); }
 
 #if !HAL_MINIMIZE_FEATURES && AP_AHRS_NAVEKF_AVAILABLE
     // update NMEA output
@@ -150,15 +103,12 @@ void AP_AHRS_NavEKF::update(bool skip_ins_update)
 void AP_AHRS_NavEKF::update_DCM(bool skip_ins_update)
 {
     // we need to restore the old DCM attitude values as these are
-    // used internally in DCM to calculate error values for gyro drift
-    // correction
-    roll = _dcm_attitude.x;
+    // used internally in DCM to calculate error values for gyro drift correction
+    roll  = _dcm_attitude.x;
     pitch = _dcm_attitude.y;
-    yaw = _dcm_attitude.z;
+    yaw   = _dcm_attitude.z;
     update_cd_values();
-
     AP_AHRS_DCM::update(skip_ins_update);
-
     // keep DCM attitude available for get_secondary_attitude()
     _dcm_attitude(roll, pitch, yaw);
 }
@@ -168,14 +118,10 @@ void AP_AHRS_NavEKF::update_EKF2(void)
     if (!_ekf2_started) {
         // wait 1 second for DCM to output a valid tilt error estimate
         if (start_time_ms == 0) {
-            start_time_ms = AP_HAL::millis();
-        }
+            start_time_ms = AP_HAL::millis(); }
         if (AP_HAL::millis() - start_time_ms > startup_delay_ms || _force_ekf) {
             _ekf2_started = EKF2.InitialiseFilter();
-            if (_force_ekf) {
-                return;
-            }
-        }
+            if (_force_ekf) { return; } }
     }
     if (_ekf2_started) {
         EKF2.UpdateFilter();
@@ -183,29 +129,16 @@ void AP_AHRS_NavEKF::update_EKF2(void)
             Vector3f eulers;
             EKF2.getRotationBodyToNED(_dcm_matrix);
             EKF2.getEulerAngles(-1,eulers);
-
-            // Matrix3f board_rotation;
-            // Matrix3f wuji_euler;
-            // float board_rotate = RC_Channels::get_radio_in(CH_6);
-            // board_rotate= (board_rotate -1500) *0.2f;            // 这里决定着倾斜角最大能转多少弧度
-            // board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
-
-            // eulers = eulers * board_rotation;            
-
-            roll  = eulers.x;
-            pitch = eulers.y;
-            yaw   = eulers.z;
-
-            // wuji_euler.from_euler(roll, pitch, yaw);
-            // wuji_euler = wuji_euler * board_rotation;  
-            // wuji_euler.to_euler(&roll, &pitch, &yaw);
+            // 直接赋值DCM欧拉角，不需要对EKF进行任何变姿处理
+            roll = _dcm_attitude.x;
+            pitch = _dcm_attitude.y;
+            yaw = _dcm_attitude.z;
 
             update_cd_values();
             update_trig();
 
             // Use the primary EKF to select the primary gyro
             const int8_t primary_imu = EKF2.getPrimaryCoreIMUIndex();
-
             const AP_InertialSensor &_ins = AP::ins();
 
             // get gyro bias for primary EKF and change sign to give gyro drift
@@ -213,21 +146,9 @@ void AP_AHRS_NavEKF::update_EKF2(void)
             _gyro_drift.zero();
             EKF2.getGyroBias(-1,_gyro_drift);
             _gyro_drift = -_gyro_drift;
-
             // calculate corrected gyro estimate for get_gyro()
-            Matrix3f board_rotation;
-            float board_rotate = RC_Channels::get_radio_in(CH_6);
-            board_rotate= (board_rotate -1500) *0.2f;    // 这里决定着倾斜角最大能转多少度
-            board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
-            _gyro_estimate.zero();                       // 归零，此参数决定着get_gyro
-            // the primary IMU is undefined so use an uncorrected default value from the INS library
-            if (primary_imu == -1 || !_ins.get_gyro_health(primary_imu)) 
-            { _gyro_estimate = _ins.get_gyro(); }        // 旋转陀螺仪关键还是在这里
-            // use the same IMU as the primary EKF and correct for gyro drift
-            else { _gyro_estimate = _ins.get_gyro(primary_imu) + _gyro_drift; }
-            _gyro_estimate = _gyro_estimate * board_rotation;
-
-
+            _gyro_estimate.zero();                     // 归零，此参数决定着get_gyro
+            _gyro_estimate = AP_AHRS_DCM::get_gyro();  // 直接赋值DCM陀螺仪，不需要对EKF进行任何变姿处理
 
             // get z accel bias estimate from active EKF (this is usually for the primary IMU)
             float abias = 0;
@@ -237,11 +158,9 @@ void AP_AHRS_NavEKF::update_EKF2(void)
             for (uint8_t i=0; i<_ins.get_accel_count(); i++) {
                 Vector3f accel = _ins.get_accel(i);
                 if (i == primary_imu) {
-                    accel.z -= abias;
-                }
+                    accel.z -= abias; }
                 if (_ins.get_accel_health(i)) {
-                    _accel_ef_ekf[i] = _dcm_matrix * get_rotation_autopilot_body_to_vehicle_body() * accel;
-                }
+                    _accel_ef_ekf[i] = _dcm_matrix * get_rotation_autopilot_body_to_vehicle_body() * accel; }
             }
             _accel_ef_ekf_blended = _accel_ef_ekf[primary_imu>=0?primary_imu:_ins.get_primary_accel()];
             nav_filter_status filt_state;
@@ -503,12 +422,9 @@ Vector3f AP_AHRS_NavEKF::wind_estimate(void) const
     case EKF_TYPE2:
         EKF2.getWind(-1,wind);
         break;
-
     case EKF_TYPE3:
         EKF3.getWind(-1,wind);
-        break;
-
-    }
+        break; }
     return wind;
 }
 
@@ -522,63 +438,53 @@ bool AP_AHRS_NavEKF::airspeed_estimate(float *airspeed_ret) const
 // true if compass is being used
 bool AP_AHRS_NavEKF::use_compass(void)
 {
-    switch (active_EKF_type()) {
-    case EKF_TYPE_NONE:
-        break;
-    case EKF_TYPE2:
-        return EKF2.use_compass();
-
-    case EKF_TYPE3:
-        return EKF3.use_compass();
+    // switch (active_EKF_type()) {
+    // case EKF_TYPE_NONE:
+    //     break;
+    // case EKF_TYPE2:
+    //     return EKF2.use_compass();
+    // case EKF_TYPE3:
+    //     return EKF3.use_compass(); }
+    return AP_AHRS_DCM::use_compass();
 
 #if CONFIG_HAL_BOARD == HAL_BOARD_SITL
     case EKF_TYPE_SITL:
         return true;
 #endif
-    }
-    return AP_AHRS_DCM::use_compass();
 }
 
 
 // return secondary attitude solution if available, as eulers in radians
 bool AP_AHRS_NavEKF::get_secondary_attitude(Vector3f &eulers) const
 {
-    switch (active_EKF_type()) {
-    case EKF_TYPE_NONE:
-        // EKF is secondary
-        EKF2.getEulerAngles(-1, eulers);
-        return _ekf2_started;
-
-    case EKF_TYPE2:
-
-    case EKF_TYPE3:
-
-    default:
-        // DCM is secondary
-        eulers = _dcm_attitude;
-        return true;
-    }
+    // switch (active_EKF_type()) {
+    // case EKF_TYPE_NONE:
+    //     // EKF is secondary
+    //     EKF2.getEulerAngles(-1, eulers);
+    //     return _ekf2_started;
+    // case EKF_TYPE2:
+    // case EKF_TYPE3:
+    // default:
+    // DCM is secondary
+    eulers = _dcm_attitude;
+    return true; // }
 }
 
 
 // return secondary attitude solution if available, as quaternion
 bool AP_AHRS_NavEKF::get_secondary_quaternion(Quaternion &quat) const
 {
-    switch (active_EKF_type()) {
-    case EKF_TYPE_NONE:
-        // EKF is secondary
-        EKF2.getQuaternion(-1, quat);
-        return _ekf2_started;
-
-    case EKF_TYPE2:
-
-    case EKF_TYPE3:
-
-    default:
-        // DCM is secondary
-        quat.from_rotation_matrix(AP_AHRS_DCM::get_rotation_body_to_ned());
-        return true;
-    }
+    // switch (active_EKF_type()) {
+    // case EKF_TYPE_NONE:
+    //     // EKF is secondary
+    //     EKF2.getQuaternion(-1, quat);
+    //     return _ekf2_started;
+    // case EKF_TYPE2:
+    // case EKF_TYPE3:
+    // default:
+    // DCM is secondary
+    quat.from_rotation_matrix(AP_AHRS_DCM::get_rotation_body_to_ned());
+    return true; // }
 }
 
 // return secondary position solution if available

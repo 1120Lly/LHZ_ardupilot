@@ -27,8 +27,7 @@ void AP_AHRS_View::set_pitch_trim(float trim_deg) {
     _pitch_trim_deg = trim_deg; 
     rot_view.from_euler(0, radians(wrap_360(y_angle + _pitch_trim_deg)), 0);
     rot_view_T = rot_view;
-    rot_view_T.transpose();
-};
+    rot_view_T.transpose(); };
 
 // update state
 void AP_AHRS_View::update(bool skip_ins_update)
@@ -39,7 +38,6 @@ void AP_AHRS_View::update(bool skip_ins_update)
     board_rotation.from_euler(radians(0), radians(board_rotate), radians(0)); // 新加语句
     rot_body_to_ned = ahrs.get_rotation_body_to_ned();          // 原有语句
     gyro = ahrs.get_gyro();                                     // 原有语句，在AP_AHRS中虚定义初始值为0
-
     if (!is_zero(y_angle + _pitch_trim_deg))                    // 原有语句
     {   rot_body_to_ned = rot_body_to_ned * rot_view_T;
         gyro = rot_view * gyro;   }
@@ -64,7 +62,6 @@ Vector3f AP_AHRS_View::get_gyro_latest(void) const
     float board_rotate = RC_Channels::get_radio_in(CH_6);       // 获取遥控器第6通道信号
     board_rotate= (board_rotate -1500) *0.2f;                   // 转换为最大倾斜角度
     board_rotation.from_euler(radians(0), radians(board_rotate), radians(0)); // 新加语句
-
     gyro_latest.rotate(rotation);                               // 原有语句，陀螺仪数据进行原本程序的角度旋转
     gyro_latest = gyro_latest * board_rotation;                 // 陀螺仪数据进行自定义俯仰角度旋转
     return gyro_latest;                                         // 原有语句，返回处理后的陀螺仪数据
@@ -72,14 +69,10 @@ Vector3f AP_AHRS_View::get_gyro_latest(void) const
 
 // rotate a 2D vector from earth frame to body frame
 Vector2f AP_AHRS_View::rotate_earth_to_body2D(const Vector2f &ef) const
-{
-    return Vector2f(ef.x * trig.cos_yaw + ef.y * trig.sin_yaw,
-                    -ef.x * trig.sin_yaw + ef.y * trig.cos_yaw);
-}
+{   return Vector2f(ef.x * trig.cos_yaw + ef.y * trig.sin_yaw,
+                    -ef.x * trig.sin_yaw + ef.y * trig.cos_yaw); }
 
 // rotate a 2D vector from earth frame to body frame
 Vector2f AP_AHRS_View::rotate_body_to_earth2D(const Vector2f &bf) const
-{
-    return Vector2f(bf.x * trig.cos_yaw - bf.y * trig.sin_yaw,
-                    bf.x * trig.sin_yaw + bf.y * trig.cos_yaw);
-}
+{   return Vector2f(bf.x * trig.cos_yaw - bf.y * trig.sin_yaw,
+                    bf.x * trig.sin_yaw + bf.y * trig.cos_yaw); }
