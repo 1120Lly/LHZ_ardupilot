@@ -16,7 +16,8 @@ class AP_AHRS_NavEKF : public AP_AHRS_DCM {
 public:
     enum Flags { FLAG_NONE = 0,
         //注意：此处将永久使用EKF标志位改为0，原本是 FLAG_ALWAYS_USE_EKF = 0x1
-        FLAG_ALWAYS_USE_EKF = 0x0,
+        // FLAG_ALWAYS_USE_EKF = 0x0,
+        FLAG_ALWAYS_USE_EKF = 0x1,
     };
 
     // Constructor

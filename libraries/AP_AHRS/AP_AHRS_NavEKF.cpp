@@ -49,9 +49,17 @@ AP_AHRS_NavEKF::AP_AHRS_NavEKF(NavEKF2 &_EKF2,
 // return the smoothed gyro vector corrected for drift
 const Vector3f &AP_AHRS_NavEKF::get_gyro(void) const
 {
-    if (!active_EKF_type()) {
-        return AP_AHRS_DCM::get_gyro();
-    }
+    // 经排查，这里修改语法不对，导致陀螺仪输出一组夸张的定值
+    // Vector3f wuji_get_gyro;
+    // Matrix3f board_rotation;
+    // float board_rotate = RC_Channels::get_radio_in(CH_6);
+    // board_rotate= (board_rotate -1500) *0.2f; // 这里决定着倾斜角最大能转多少度
+    // board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
+
+    if (!active_EKF_type()) { return AP_AHRS_DCM::get_gyro(); }
+    // wuji_get_gyro = _gyro_estimate;
+
+    // _gyro_estimate = board_rotation * _gyro_estimate; // * board_rotation;
     return _gyro_estimate;
 }
 
@@ -189,7 +197,7 @@ void AP_AHRS_NavEKF::update_EKF2(void)
             yaw   = eulers.z;
 
             // wuji_euler.from_euler(roll, pitch, yaw);
-            // wuji_euler = wuji_euler * board_rotation;            // 俯仰变姿测试成功
+            // wuji_euler = wuji_euler * board_rotation;  
             // wuji_euler.to_euler(&roll, &pitch, &yaw);
 
             update_cd_values();
@@ -211,7 +219,7 @@ void AP_AHRS_NavEKF::update_EKF2(void)
             float board_rotate = RC_Channels::get_radio_in(CH_6);
             board_rotate= (board_rotate -1500) *0.2f;    // 这里决定着倾斜角最大能转多少度
             board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
-            _gyro_estimate.zero();                       // 归零
+            _gyro_estimate.zero();                       // 归零，此参数决定着get_gyro
             // the primary IMU is undefined so use an uncorrected default value from the INS library
             if (primary_imu == -1 || !_ins.get_gyro_health(primary_imu)) 
             { _gyro_estimate = _ins.get_gyro(); }        // 旋转陀螺仪关键还是在这里
