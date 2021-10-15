@@ -1701,8 +1701,8 @@ Compass::calculate_heading(const Matrix3f &dcm_matrix, uint8_t i) const
     float cos_pitch_sq = 1.0f-(dcm_matrix.c.x*dcm_matrix.c.x);
 
     // Tilt compensated magnetic field Y component:
-    // const Vector3f &field = get_field(i);
-    Vector3f field = get_field(i);
+    const Vector3f &field = get_field(i);
+    // Vector3f field = get_field(i);
 
     // Matrix3f board_rotation;
     // float board_rotate = RC_Channels::get_radio_in(CH_6);

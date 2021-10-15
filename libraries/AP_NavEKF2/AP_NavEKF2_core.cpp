@@ -614,7 +614,7 @@ void NavEKF2_core::UpdateFilter(bool predict)
         last_filter_ok_ms = AP_HAL::millis(); }
     // 解锁前不要旋转变姿，否则会导致EKF强制重置，EKF关系到的内容太多，为了飞行安全，不能关闭这一重置机制
     if (filterStatus.value == 0 && last_filter_ok_ms != 0 &&
-        AP_HAL::millis() - last_filter_ok_ms > 2000 && !hal.util->get_soft_armed()) {
+        AP_HAL::millis() - last_filter_ok_ms > 5000 && !hal.util->get_soft_armed()) {
         // we've been unhealthy for n seconds after being healthy, reset the filter
         gcs().send_text(MAV_SEVERITY_WARNING, "EKF2 IMU%u forced reset",(unsigned)imu_index);
         last_filter_ok_ms = 0;
