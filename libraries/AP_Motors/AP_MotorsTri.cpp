@@ -95,7 +95,6 @@ uint16_t AP_MotorsTri::get_motor_mask()
 }
 
 // output_armed - sends commands to the motors
-// includes new scaling stability patch
 void AP_MotorsTri::output_armed_stabilizing()
 {
     float   roll_thrust;         // roll thrust input value, +/- 1.0
@@ -103,7 +102,7 @@ void AP_MotorsTri::output_armed_stabilizing()
     float   yaw_thrust;          // yaw thrust input value, +/- 1.0
     float   throttle_thrust;     // throttle thrust input value, 0.0 - 1.0
     float   thrust_max;          // highest motor value
-    float   thr_adj = 0.0f;      // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
+    float   thr_adj = 0.0f;      // 飞行员期望油门和throttle_thrust_best_rpy之间的差值
     float   rotate_angle;        // 旋转角输入值，最左为0，最右为1
     float   rate;                // 俯仰控制权重，水平为0，朝下为1，朝上为-1
     float   m_rate;              // 电机俯仰控制权重，水平为1，朝下为0，朝上为0
@@ -138,14 +137,14 @@ void AP_MotorsTri::output_armed_stabilizing()
      yaw_thrust = yaw_thrust - s_rate *yaw_thrust *0.4f;
 
     // 舵机控制分配（小飞机）
-    _tilt_left    = -rotate_angle *0.6f - s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
-    _tilt_right   =  rotate_angle *0.6f + s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
-    _tilt_tail    =  rotate_angle *0.6f - s_rate *pitch_thrust *0.4f;
+    _tilt_left    = -rotate_angle *0.7f - s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
+    _tilt_right   =  rotate_angle *0.7f + s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
+    _tilt_tail    =  rotate_angle *0.7f - s_rate *pitch_thrust *0.4f;
                 
     // 用于检测舵机变姿倾转极限位置
-    // _tilt_left    = -rotate_angle *0.6f ;
-    // _tilt_right   =  rotate_angle *0.6f ;
-    // _tilt_tail    =  rotate_angle *0.6f ;
+    // _tilt_left    = -rotate_angle *0.7f ;
+    // _tilt_right   =  rotate_angle *0.7f ;
+    // _tilt_tail    =  rotate_angle *0.7f ;
 
    // 如果最大推力大于1，则降低平均油门
     thrust_max = MAX(_thrust_right,_thrust_left);
@@ -159,22 +158,16 @@ void AP_MotorsTri::output_armed_stabilizing()
     _throttle = throttle_thrust + thr_adj;
     _throttle_out = _throttle / compensation_gain;
 }
-
-// output_test_seq - spin a motor at the pwm value specified
-//  motor_seq is the motor's sequence number from 1 to the number of motors on the frame
-//  pwm value is an actual pwm value that will be output, normally in the range of 1000 ~ 2000
+    // 执行器信号输出
 void AP_MotorsTri::output_test_seq(uint8_t motor_seq, int16_t pwm)
 {
-    // exit immediately if not armed
-    if (!armed()) { return; }
-    // output to motors and servos
-    switch (motor_seq) {
+    if (!armed()) { return; } // exit immediately if not armed
+    switch (motor_seq)  {     // output to motors and servos
         case 1: SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, pwm);  break;
         case 2: SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, pwm); break;
         case 3: SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTail, pwm);  break;
         case 4: SRV_Channels::set_output_pwm(SRV_Channel::k_tiltLeft, pwm);      break;
         case 5: SRV_Channels::set_output_pwm(SRV_Channel::k_tiltRight, pwm);     break;
         case 6: SRV_Channels::set_output_pwm(SRV_Channel::k_tiltTail, pwm);      break;
-        default: break;
-    }
+        default: break; }
 }

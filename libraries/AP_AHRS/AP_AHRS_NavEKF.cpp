@@ -140,15 +140,19 @@ void AP_AHRS_NavEKF::update_EKF2(void)
             // Use the primary EKF to select the primary gyro
             const int8_t primary_imu = EKF2.getPrimaryCoreIMUIndex();
             const AP_InertialSensor &_ins = AP::ins();
-
             // get gyro bias for primary EKF and change sign to give gyro drift
             // Note sign convention used by EKF is bias = measurement - truth
             _gyro_drift.zero();
             EKF2.getGyroBias(-1,_gyro_drift);
             _gyro_drift = -_gyro_drift;
             // calculate corrected gyro estimate for get_gyro()
-            _gyro_estimate.zero();                     // 归零，此参数决定着get_gyro
-            _gyro_estimate = AP_AHRS_DCM::get_gyro();  // 直接赋值DCM陀螺仪，不需要对EKF进行任何变姿处理
+            _gyro_estimate.zero();                       // 归零，此参数决定着get_gyro
+            // the primary IMU is undefined so use an uncorrected default value from the INS library
+            if (primary_imu == -1 || !_ins.get_gyro_health(primary_imu)) 
+            { _gyro_estimate = _ins.get_gyro(); }        // 旋转陀螺仪关键还是在这里
+            // use the same IMU as the primary EKF and correct for gyro drift
+            else { _gyro_estimate = _ins.get_gyro(primary_imu) + _gyro_drift; }
+            _gyro_estimate = AP_AHRS_DCM::get_gyro();    // 直接赋值DCM陀螺仪，不需要对EKF进行任何变姿处理
 
             // get z accel bias estimate from active EKF (this is usually for the primary IMU)
             float abias = 0;
@@ -309,8 +313,7 @@ void AP_AHRS_NavEKF::update_SITL(void)
 const Vector3f &AP_AHRS_NavEKF::get_accel_ef(uint8_t i) const
 {
     if (active_EKF_type() == EKF_TYPE_NONE) {
-        return AP_AHRS_DCM::get_accel_ef(i);
-    }
+        return AP_AHRS_DCM::get_accel_ef(i); }
     return _accel_ef_ekf[i];
 }
 
@@ -318,8 +321,7 @@ const Vector3f &AP_AHRS_NavEKF::get_accel_ef(uint8_t i) const
 const Vector3f &AP_AHRS_NavEKF::get_accel_ef_blended(void) const
 {
     if (active_EKF_type() == EKF_TYPE_NONE) {
-        return AP_AHRS_DCM::get_accel_ef_blended();
-    }
+        return AP_AHRS_DCM::get_accel_ef_blended(); }
     return _accel_ef_ekf_blended;
 }
 
@@ -327,15 +329,12 @@ void AP_AHRS_NavEKF::reset(bool recover_eulers)
 {
     // support locked access functions to AHRS data
     WITH_SEMAPHORE(_rsem);
-    
     AP_AHRS_DCM::reset(recover_eulers);
     _dcm_attitude(roll, pitch, yaw);
     if (_ekf2_started) {
-        _ekf2_started = EKF2.InitialiseFilter();
-    }
+        _ekf2_started = EKF2.InitialiseFilter(); }
     if (_ekf3_started) {
-        _ekf3_started = EKF3.InitialiseFilter();
-    }
+        _ekf3_started = EKF3.InitialiseFilter(); }
 }
 
 // reset the current attitude, used on new IMU calibration
@@ -395,14 +394,10 @@ bool AP_AHRS_NavEKF::get_position(struct Location &loc) const
 
 // status reporting of estimated errors
 float AP_AHRS_NavEKF::get_error_rp(void) const
-{
-    return AP_AHRS_DCM::get_error_rp();
-}
+{   return AP_AHRS_DCM::get_error_rp(); }
 
 float AP_AHRS_NavEKF::get_error_yaw(void) const
-{
-    return AP_AHRS_DCM::get_error_yaw();
-}
+{   return AP_AHRS_DCM::get_error_yaw(); }
 
 // return a wind estimation vector, in m/s
 Vector3f AP_AHRS_NavEKF::wind_estimate(void) const
@@ -431,9 +426,7 @@ Vector3f AP_AHRS_NavEKF::wind_estimate(void) const
 // return an airspeed estimate if available. return true
 // if we have an estimate
 bool AP_AHRS_NavEKF::airspeed_estimate(float *airspeed_ret) const
-{
-    return AP_AHRS_DCM::airspeed_estimate(airspeed_ret);
-}
+{   return AP_AHRS_DCM::airspeed_estimate(airspeed_ret); }
 
 // true if compass is being used
 bool AP_AHRS_NavEKF::use_compass(void)
@@ -497,9 +490,7 @@ bool AP_AHRS_NavEKF::get_secondary_position(struct Location &loc) const
         return _ekf2_started;
 
     case EKF_TYPE2:
-
     case EKF_TYPE3:
-
     default:
         // return DCM position
         AP_AHRS_DCM::get_position(loc);

@@ -20,20 +20,17 @@ void Copter::crash_check()
     // return immediately if disarmed, or crash checking disabled
     if (!motors->armed() || ap.land_complete || g.fs_crash_check == 0) {
         crash_counter = 0;
-        return;
-    }
+        return;    }
 
     // exit immediately if in standby
     if (standby_active) {
         crash_counter = 0;
-        return;
-    }
+        return;    }
 
     // return immediately if we are not in an angle stabilize flight mode or we are flipping
     if (control_mode == Mode::Number::ACRO || control_mode == Mode::Number::FLIP) {
         crash_counter = 0;
-        return;
-    }
+        return;    }
 
 #if MODE_AUTOROTATE_ENABLED == ENABLED
     //return immediately if in autorotation mode
@@ -46,15 +43,13 @@ void Copter::crash_check()
     // vehicle not crashed if 1hz filtered acceleration is more than 3m/s (1G on Z-axis has been subtracted)
     if (land_accel_ef_filter.get().length() >= CRASH_CHECK_ACCEL_MAX) {
         crash_counter = 0;
-        return;
-    }
+        return;    }
 
     // check for angle error over 30 degrees
     const float angle_error = attitude_control->get_att_error_angle_deg();
     if (angle_error <= CRASH_CHECK_ANGLE_DEVIATION_DEG) {
         crash_counter = 0;
-        return;
-    }
+        return;    }
 
     // we may be crashing
     crash_counter++;
@@ -78,52 +73,44 @@ void Copter::thrust_loss_check()
 
     // exit immediately if thrust boost is already engaged
     if (motors->get_thrust_boost()) {
-        return;
-    }
+        return;    }
 
     // return immediately if disarmed
     if (!motors->armed() || ap.land_complete) {
         thrust_loss_counter = 0;
-        return;
-    }
+        return;    }
 
     // exit immediately if in standby
     if (standby_active) {
-        return;
-    }
+        return;    }
 
     // check for desired angle over 15 degrees
     // todo: add thrust angle to AC_AttitudeControl
     const Vector3f angle_target = attitude_control->get_att_target_euler_cd();
     if (sq(angle_target.x) + sq(angle_target.y) > sq(THRUST_LOSS_CHECK_ANGLE_DEVIATION_CD)) {
         thrust_loss_counter = 0;
-        return;
-    }
+        return;    }
 
     // check for throttle over 90% or throttle saturation
     if ((attitude_control->get_throttle_in() < THRUST_LOSS_CHECK_MINIMUM_THROTTLE) && (!motors->limit.throttle_upper)) {
         thrust_loss_counter = 0;
-        return;
-    }
+        return;    }
 
     // check throttle is over 25% to prevent checks triggering from thrust limitations caused by low commanded throttle
     if ((attitude_control->get_throttle_in() < 0.25f)) {
         thrust_loss_counter = 0;
-        return;
-    }
+        return;    }
 
     // check for descent
     if (!is_negative(inertial_nav.get_velocity_z())) {
         thrust_loss_counter = 0;
-        return;
-    }
+        return;    }
 
     // check for angle error over 30 degrees to ensure the aircraft has attitude control
     const float angle_error = attitude_control->get_att_error_angle_deg();
     if (angle_error >= CRASH_CHECK_ANGLE_DEVIATION_DEG) {
         thrust_loss_counter = 0;
-        return;
-    }
+        return;    }
 
     // the aircraft is descending with low requested roll and pitch, at full available throttle, with attitude control
     // we may have lost thrust
@@ -158,13 +145,11 @@ void Copter::parachute_check()
 
     // exit immediately if parachute is not enabled
     if (!parachute.enabled()) {
-        return;
-    }
+        return;    }
 
     // exit immediately if in standby
     if (standby_active) {
-        return;
-    }
+        return;    }
 
     // call update to give parachute a chance to move servo or relay back to off position
     parachute.update();
@@ -172,59 +157,49 @@ void Copter::parachute_check()
     // return immediately if motors are not armed or pilot's throttle is above zero
     if (!motors->armed()) {
         control_loss_count = 0;
-        return;
-    }
+        return;    }
 
     // return immediately if we are not in an angle stabilize flight mode or we are flipping
     if (control_mode == Mode::Number::ACRO || control_mode == Mode::Number::FLIP) {
         control_loss_count = 0;
-        return;
-    }
+        return;    }
 
     // ensure we are flying
     if (ap.land_complete) {
         control_loss_count = 0;
-        return;
-    }
+        return;    }
 
     // ensure the first control_loss event is from above the min altitude
     if (control_loss_count == 0 && parachute.alt_min() != 0 && (current_loc.alt < (int32_t)parachute.alt_min() * 100)) {
-        return;
-    }
+        return;    }
 
     // check for angle error over 30 degrees
     const float angle_error = attitude_control->get_att_error_angle_deg();
     if (angle_error <= CRASH_CHECK_ANGLE_DEVIATION_DEG) {
         if (control_loss_count > 0) {
-            control_loss_count--;
-        }
-        return;
-    }
+            control_loss_count--;   }
+        return;    }
 
     // increment counter
     if (control_loss_count < (PARACHUTE_CHECK_TRIGGER_SEC*scheduler.get_loop_rate_hz())) {
-        control_loss_count++;
-    }
+        control_loss_count++;    }
 
     // record baro alt if we have just started losing control
     if (control_loss_count == 1) {
-        baro_alt_start = baro_alt;
+        baro_alt_start = baro_alt; } 
 
     // exit if baro altitude change indicates we are not falling
-    } else if (baro_alt >= baro_alt_start) {
+    else if (baro_alt >= baro_alt_start) {
         control_loss_count = 0;
-        return;
-
-    // To-Do: add check that the vehicle is actually falling
+        return; } 
 
     // check if loss of control for at least 1 second
-    } else if (control_loss_count >= (PARACHUTE_CHECK_TRIGGER_SEC*scheduler.get_loop_rate_hz())) {
+    else if (control_loss_count >= (PARACHUTE_CHECK_TRIGGER_SEC*scheduler.get_loop_rate_hz())) {
         // reset control loss counter
         control_loss_count = 0;
         AP::logger().Write_Error(LogErrorSubsystem::CRASH_CHECK, LogErrorCode::CRASH_CHECK_LOSS_OF_CONTROL);
         // release parachute
-        parachute_release();
-    }
+        parachute_release();    }
 
     // pass sink rate to parachute library
     parachute.set_sink_rate(-inertial_nav.get_velocity_z() * 0.01);
@@ -235,10 +210,8 @@ void Copter::parachute_release()
 {
     // disarm motors
     arming.disarm();
-
     // release parachute
     parachute.release();
-
     // deploy landing gear
     landinggear.set_position(AP_LandingGear::LandingGear_Deploy);
 }
@@ -249,8 +222,7 @@ void Copter::parachute_manual_release()
 {
     // exit immediately if parachute is not enabled
     if (!parachute.enabled()) {
-        return;
-    }
+        return;    }
 
     // do not release if vehicle is landed
     // do not release if we are landed or below the minimum altitude above home
@@ -258,16 +230,14 @@ void Copter::parachute_manual_release()
         // warn user of reason for failure
         gcs().send_text(MAV_SEVERITY_INFO,"Parachute: Landed");
         AP::logger().Write_Error(LogErrorSubsystem::PARACHUTES, LogErrorCode::PARACHUTE_LANDED);
-        return;
-    }
+        return;    }
 
     // do not release if we are landed or below the minimum altitude above home
     if ((parachute.alt_min() != 0 && (current_loc.alt < (int32_t)parachute.alt_min() * 100))) {
         // warn user of reason for failure
         gcs().send_text(MAV_SEVERITY_ALERT,"Parachute: Too low");
         AP::logger().Write_Error(LogErrorSubsystem::PARACHUTES, LogErrorCode::PARACHUTE_TOO_LOW);
-        return;
-    }
+        return;    }
 
     // if we get this far release parachute
     parachute_release();

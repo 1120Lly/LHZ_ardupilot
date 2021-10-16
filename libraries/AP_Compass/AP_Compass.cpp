@@ -1699,36 +1699,22 @@ float
 Compass::calculate_heading(const Matrix3f &dcm_matrix, uint8_t i) const
 {
     float cos_pitch_sq = 1.0f-(dcm_matrix.c.x*dcm_matrix.c.x);
-
     // Tilt compensated magnetic field Y component:
-    // const Vector3f &field = get_field(i);
-    Vector3f field = get_field(i);
-
-    // Matrix3f board_rotation;
-    // float board_rotate = RC_Channels::get_radio_in(CH_6);
-    // board_rotate= (board_rotate -1500) *0.2f; // 这里决定着倾斜角最大能转多少度
-    // board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
-    // field = field * board_rotation;
-
+    const Vector3f &field = get_field(i);
     float headY = field.y * dcm_matrix.c.z - field.z * dcm_matrix.c.y;
-
     // Tilt compensated magnetic field X component:
     float headX = field.x * cos_pitch_sq - dcm_matrix.c.x * (field.y * dcm_matrix.c.y + field.z * dcm_matrix.c.z);
-
     // magnetic heading
     // 6/4/11 - added constrain to keep bad values from ruining DCM Yaw - Jason S.
     float heading = constrain_float(atan2f(-headY,headX), -3.15f, 3.15f);
-
     // Declination correction (if supplied)
     if ( fabsf(_declination) > 0.0f ) {
         heading = heading + _declination;
         if (heading > M_PI) {  // Angle normalization (-180 deg, 180 deg)
             heading -= (2.0f * M_PI);
         } else if (heading < -M_PI) {
-            heading += (2.0f * M_PI);
-        }
+            heading += (2.0f * M_PI); }
     }
-
     return heading;
 }
 

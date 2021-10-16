@@ -15,10 +15,7 @@
 class AP_AHRS_NavEKF : public AP_AHRS_DCM {
 public:
     enum Flags { FLAG_NONE = 0,
-        //注意：此处将永久使用EKF标志位改为0，原本是 FLAG_ALWAYS_USE_EKF = 0x1
-        // FLAG_ALWAYS_USE_EKF = 0x0,
-        FLAG_ALWAYS_USE_EKF = 0x1,
-    };
+    FLAG_ALWAYS_USE_EKF = 0x1, };
 
     // Constructor
     AP_AHRS_NavEKF(NavEKF2 &_EKF2, NavEKF3 &_EKF3, Flags flags = FLAG_NONE);
@@ -30,7 +27,6 @@ public:
     // return the smoothed gyro vector corrected for drift
     const Vector3f &get_gyro(void) const override;
     const Matrix3f &get_rotation_body_to_ned(void) const override;
-
     // return the current drift correction integrator value
     const Vector3f &get_gyro_drift(void) const override;
 
