@@ -11,13 +11,6 @@ extern const AP_HAL::HAL& hal;
 void AP_MotorsTri::init(motor_frame_class frame_class, motor_frame_type frame_type)
 {   uint8_t chan;     // 设置默认的电机和伺服映射
 
-    // k_motor1 throttleLeft  左电机   73  1
-    // k_motor2 throttleRight 右电机   74  3
-    // k_motor3 throttleTail  尾左电机 133 2
-    // k_motor4 tiltLeft      左倾转   134
-    // k_motor5 tiltRight     右倾转   135
-    // k_motor6 tiltTail      尾倾转   136
-
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleLeft, CH_1);
     if (SRV_Channels::find_channel(SRV_Channel::k_throttleLeft,  chan)) { motor_enabled[chan] = true; }
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleRight, CH_3);
@@ -136,15 +129,10 @@ void AP_MotorsTri::output_armed_stabilizing()
     // 航向控制在大角度时适度减弱
      yaw_thrust = yaw_thrust - s_rate *yaw_thrust *0.4f;
 
-    // 舵机控制分配（小飞机）
+    // 舵机控制分配
     _tilt_left    = -rotate_angle *0.7f - s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
     _tilt_right   =  rotate_angle *0.7f + s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
     _tilt_tail    =  rotate_angle *0.7f - s_rate *pitch_thrust *0.4f;
-                
-    // 用于检测舵机变姿倾转极限位置
-    // _tilt_left    = -rotate_angle *0.7f ;
-    // _tilt_right   =  rotate_angle *0.7f ;
-    // _tilt_tail    =  rotate_angle *0.7f ;
 
    // 如果最大推力大于1，则降低平均油门
     thrust_max = MAX(_thrust_right,_thrust_left);
@@ -162,12 +150,12 @@ void AP_MotorsTri::output_armed_stabilizing()
 void AP_MotorsTri::output_test_seq(uint8_t motor_seq, int16_t pwm)
 {
     if (!armed()) { return; } // exit immediately if not armed
-    switch (motor_seq)  {     // output to motors and servos
+    switch (motor_seq)      { // output to motors and servos
         case 1: SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, pwm);  break;
         case 2: SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, pwm); break;
         case 3: SRV_Channels::set_output_pwm(SRV_Channel::k_throttleTail, pwm);  break;
         case 4: SRV_Channels::set_output_pwm(SRV_Channel::k_tiltLeft, pwm);      break;
         case 5: SRV_Channels::set_output_pwm(SRV_Channel::k_tiltRight, pwm);     break;
         case 6: SRV_Channels::set_output_pwm(SRV_Channel::k_tiltTail, pwm);      break;
-        default: break; }
+        default:     break; }
 }
