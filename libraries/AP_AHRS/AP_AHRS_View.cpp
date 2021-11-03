@@ -35,7 +35,7 @@ void AP_AHRS_View::update(bool skip_ins_update)
     Matrix3f board_rotation;                                    // 新加语句
     float board_rotate = RC_Channels::get_radio_in(CH_6);       // 新加语句，获取遥控器第6通道信号
     board_rotate= (board_rotate -1500) *0.2f;                   // 新加语句，转换为最大倾斜角度
-    board_rotation.from_euler(radians(0), radians(board_rotate), radians(0)); // 新加语句
+    board_rotation.from_euler(radians(0), radians(-board_rotate), radians(0)); // 新加语句
     rot_body_to_ned = ahrs.get_rotation_body_to_ned();          // 原有语句
     gyro = ahrs.get_gyro();                                     // 原有语句，在AP_AHRS中虚定义初始值为0
     if (!is_zero(y_angle + _pitch_trim_deg))                    // 原有语句
@@ -61,7 +61,7 @@ Vector3f AP_AHRS_View::get_gyro_latest(void) const
     Vector3f gyro_latest = ahrs.get_gyro_latest();              // 原有语句，获取最新的陀螺仪数据
     float board_rotate = RC_Channels::get_radio_in(CH_6);       // 获取遥控器第6通道信号
     board_rotate= (board_rotate -1500) *0.2f;                   // 转换为最大倾斜角度
-    board_rotation.from_euler(radians(0), radians(board_rotate), radians(0)); // 新加语句
+    board_rotation.from_euler(radians(0), radians(-board_rotate), radians(0)); // 新加语句
     gyro_latest.rotate(rotation);                               // 原有语句，陀螺仪数据进行原本程序的角度旋转
     gyro_latest = gyro_latest * board_rotation;                 // 陀螺仪数据进行自定义俯仰角度旋转
     return gyro_latest;                                         // 原有语句，返回处理后的陀螺仪数据

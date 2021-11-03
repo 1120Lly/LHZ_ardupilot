@@ -122,17 +122,22 @@ void AP_MotorsTri::output_armed_stabilizing()
     { throttle_thrust = _throttle_thrust_max; limit.throttle_upper = true; }
 
     // 电机控制分配 calculate left and right throttle outputs
-    _thrust_left  =  throttle_thrust - m_rate *pitch_thrust *0.4f + roll_thrust *0.45f;
-    _thrust_right =  throttle_thrust - m_rate *pitch_thrust *0.4f - roll_thrust *0.45f;
-    _thrust_tail  =  throttle_thrust + m_rate *pitch_thrust *0.6f ;
+    _thrust_left  =  throttle_thrust + m_rate *pitch_thrust *0.4f - roll_thrust *0.45f;
+    _thrust_right =  throttle_thrust + m_rate *pitch_thrust *0.4f + roll_thrust *0.45f;
+    _thrust_tail  =  throttle_thrust - m_rate *pitch_thrust *0.6f ;
 
     // 航向控制在大角度时适度减弱
      yaw_thrust = yaw_thrust - s_rate *yaw_thrust *0.4f;
 
-    // 舵机控制分配
-    _tilt_left    = -rotate_angle *0.7f - s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
-    _tilt_right   =  rotate_angle *0.7f + s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
-    _tilt_tail    =  rotate_angle *0.7f - s_rate *pitch_thrust *0.4f;
+    // 舵机控制分配，向上和向下的俯仰控制参与者不同
+    if (rotate_angle <= 0.0f)  {
+        _tilt_left    = -rotate_angle *0.7f - s_rate *pitch_thrust *0.2f - yaw_thrust *0.3f;
+        _tilt_right   =  rotate_angle *0.7f + s_rate *pitch_thrust *0.2f - yaw_thrust *0.3f;
+        _tilt_tail    =  rotate_angle *0.7f - s_rate *pitch_thrust *0.5f; }
+    if (rotate_angle > 0.0f)   {
+        _tilt_left    = -rotate_angle *0.7f + s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
+        _tilt_right   =  rotate_angle *0.7f - s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
+        _tilt_tail    =  rotate_angle *0.7f + s_rate *pitch_thrust *0.4f; }
 
    // 如果最大推力大于1，则降低平均油门
     thrust_max = MAX(_thrust_right,_thrust_left);

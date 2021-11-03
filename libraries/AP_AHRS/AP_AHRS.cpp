@@ -175,18 +175,8 @@ void AP_AHRS::init()
 // return a smoothed and corrected gyro vector using the latest ins data (which may not have been consumed by the EKF yet)
 Vector3f AP_AHRS::get_gyro_latest(void) const
 {
-    // Vector3f wuji_get_gyro_latest;
-    // Matrix3f board_rotation;
-    // float board_rotate = RC_Channels::get_radio_in(CH_6);
-    // board_rotate= (board_rotate -1500) *0.2f; // 这里决定着倾斜角最大能转多少度
-    // board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
-
     const uint8_t primary_gyro = get_primary_gyro_index();
     return AP::ins().get_gyro(primary_gyro) + get_gyro_drift();
-    // wuji_get_gyro_latest = AP::ins().get_gyro(primary_gyro) + get_gyro_drift();
-    // wuji_get_gyro_latest = wuji_get_gyro_latest * board_rotation;
-    // return wuji_get_gyro_latest;
-
 }
 
 // return airspeed estimate if available
