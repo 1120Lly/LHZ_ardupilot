@@ -11,7 +11,7 @@
 #define AP_MOTORS_COAX_POSITIVE      1
 #define AP_MOTORS_COAX_NEGATIVE     -1
 
-#define NUM_ACTUATORS 4
+#define NUM_ACTUATORS 2
 
 #define AP_MOTORS_SINGLE_SPEED_DIGITAL_SERVOS 250 // update rate for digital servos
 #define AP_MOTORS_SINGLE_SPEED_ANALOG_SERVOS 125  // update rate for analog servos

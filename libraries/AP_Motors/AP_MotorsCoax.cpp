@@ -1,24 +1,4 @@
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
- *       AP_MotorsSingle.cpp - ArduCopter motors library
- *       Code by RandyMackay. DIYDrones.com
- *
- */
-
+// 共轴飞行器，机架类型设为9，共有4个输出
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
 #include "AP_MotorsCoax.h"
@@ -29,75 +9,54 @@ extern const AP_HAL::HAL& hal;
 // init
 void AP_MotorsCoax::init(motor_frame_class frame_class, motor_frame_type frame_type)
 {
-    // make sure 6 output channels are mapped
-    for (uint8_t i = 0; i < 6; i++) {
-        add_motor_num(CH_1 + i);
-    }
-
-    // set the motor_enabled flag so that the main ESC can be calibrated like other frame types
-    motor_enabled[AP_MOTORS_MOT_5] = true;
-    motor_enabled[AP_MOTORS_MOT_6] = true;
-
+    for (uint8_t i = 0; i < 4; i++) {  add_motor_num(CH_1 + i);  }   // 确保输出4个输出通道
+    motor_enabled[AP_MOTORS_MOT_3] = true;                           // 设置电机使能标志，使其可以进行电调校准
+    motor_enabled[AP_MOTORS_MOT_4] = true;
     // setup actuator scaling
-    for (uint8_t i = 0; i < NUM_ACTUATORS; i++) {
-        SRV_Channels::set_angle(SRV_Channels::get_motor_function(i), AP_MOTORS_COAX_SERVO_INPUT_RANGE);
-    }
-
+    for (uint8_t i = 0; i < NUM_ACTUATORS; i++) 
+    {   SRV_Channels::set_angle(SRV_Channels::get_motor_function(i), AP_MOTORS_COAX_SERVO_INPUT_RANGE);  }
     // record successful initialisation if what we setup was the desired frame_class
     _flags.initialised_ok = (frame_class == MOTOR_FRAME_COAX);
 }
 
 // set frame class (i.e. quad, hexa, heli) and type (i.e. x, plus)
 void AP_MotorsCoax::set_frame_class_and_type(motor_frame_class frame_class, motor_frame_type frame_type)
-{
-    _flags.initialised_ok = (frame_class == MOTOR_FRAME_COAX);
-}
+{   _flags.initialised_ok = (frame_class == MOTOR_FRAME_COAX);  }
 
 // set update rate to motors - a value in hertz
 void AP_MotorsCoax::set_update_rate(uint16_t speed_hz)
 {
-    // record requested speed
-    _speed_hz = speed_hz;
-
-    uint32_t mask =
-        1U << AP_MOTORS_MOT_5 |
-        1U << AP_MOTORS_MOT_6 ;
+    _speed_hz = speed_hz;                                            // 记录请求速度 record requested speed
+    uint32_t mask =  1U << AP_MOTORS_MOT_3 | 1U << AP_MOTORS_MOT_4 ;
     rc_set_freq(mask, _speed_hz);
 }
 
 void AP_MotorsCoax::output_to_motors()
 {
+    for (uint8_t i = 0; i < NUM_ACTUATORS; i++) 
+        { rc_write_angle(AP_MOTORS_MOT_1 + i, _actuator_out[i] * AP_MOTORS_COAX_SERVO_INPUT_RANGE); }
+
     switch (_spool_state) {
         case SpoolState::SHUT_DOWN:
             // sends minimum values out to the motors
-            rc_write_angle(AP_MOTORS_MOT_1, _roll_radio_passthrough * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
-            rc_write_angle(AP_MOTORS_MOT_2, _pitch_radio_passthrough * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
-            rc_write_angle(AP_MOTORS_MOT_3, -_roll_radio_passthrough * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
-            rc_write_angle(AP_MOTORS_MOT_4, -_pitch_radio_passthrough * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
-            rc_write(AP_MOTORS_MOT_5, output_to_pwm(0));
-            rc_write(AP_MOTORS_MOT_6, output_to_pwm(0));
+            rc_write(AP_MOTORS_MOT_3, output_to_pwm(0));
+            rc_write(AP_MOTORS_MOT_4, output_to_pwm(0));
             break;
         case SpoolState::GROUND_IDLE:
             // sends output to motors when armed but not flying
-            for (uint8_t i = 0; i < NUM_ACTUATORS; i++) {
-                rc_write_angle(AP_MOTORS_MOT_1 + i, _spin_up_ratio * _actuator_out[i] * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
-            }
-            set_actuator_with_slew(_actuator[5], actuator_spin_up_to_ground_idle());
-            set_actuator_with_slew(_actuator[6], actuator_spin_up_to_ground_idle());
-            rc_write(AP_MOTORS_MOT_5, output_to_pwm(_actuator[5]));
-            rc_write(AP_MOTORS_MOT_6, output_to_pwm(_actuator[6]));
+            set_actuator_with_slew(_actuator[3], actuator_spin_up_to_ground_idle());
+            set_actuator_with_slew(_actuator[4], actuator_spin_up_to_ground_idle());
+            rc_write(AP_MOTORS_MOT_3, output_to_pwm(_actuator[3]));
+            rc_write(AP_MOTORS_MOT_4, output_to_pwm(_actuator[4]));
             break;
         case SpoolState::SPOOLING_UP:
         case SpoolState::THROTTLE_UNLIMITED:
         case SpoolState::SPOOLING_DOWN:
             // set motor output based on thrust requests
-            for (uint8_t i = 0; i < NUM_ACTUATORS; i++) {
-                rc_write_angle(AP_MOTORS_MOT_1 + i, _actuator_out[i] * AP_MOTORS_COAX_SERVO_INPUT_RANGE);
-            }
-            set_actuator_with_slew(_actuator[5], thrust_to_actuator(_thrust_yt_ccw));
-            set_actuator_with_slew(_actuator[6], thrust_to_actuator(_thrust_yt_cw));
-            rc_write(AP_MOTORS_MOT_5, output_to_pwm(_actuator[5]));
-            rc_write(AP_MOTORS_MOT_6, output_to_pwm(_actuator[6]));
+            set_actuator_with_slew(_actuator[3], thrust_to_actuator(_thrust_yt_ccw));
+            set_actuator_with_slew(_actuator[4], thrust_to_actuator(_thrust_yt_cw));
+            rc_write(AP_MOTORS_MOT_3, output_to_pwm(_actuator[3]));
+            rc_write(AP_MOTORS_MOT_4, output_to_pwm(_actuator[4]));
             break;
     }
 }
@@ -106,18 +65,11 @@ void AP_MotorsCoax::output_to_motors()
 //  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
 uint16_t AP_MotorsCoax::get_motor_mask()
 {
-    uint32_t motor_mask =
-        1U << AP_MOTORS_MOT_1 |
-        1U << AP_MOTORS_MOT_2 |
-        1U << AP_MOTORS_MOT_3 |
-        1U << AP_MOTORS_MOT_4 |
-        1U << AP_MOTORS_MOT_5 |
-        1U << AP_MOTORS_MOT_6;
+    uint32_t motor_mask =  //  1U代表无符号整型的值为1，可以表示为00000000…1(最后一位为1，31个0，1个1)
+    1U << AP_MOTORS_MOT_1 | 1U << AP_MOTORS_MOT_2 | 1U << AP_MOTORS_MOT_3 | 1U << AP_MOTORS_MOT_4;
     uint16_t mask = rc_map_mask(motor_mask);
-
     // add parent's mask
     mask |= AP_MotorsMulticopter::get_motor_mask();
-
     return mask;
 }
 
@@ -146,41 +98,29 @@ void AP_MotorsCoax::output_armed_stabilizing()
     // sanity check throttle is above zero and below current limited throttle
     if (throttle_thrust <= 0.0f) {
         throttle_thrust = 0.0f;
-        limit.throttle_lower = true;
-    }
+        limit.throttle_lower = true;    }
     if (throttle_thrust >= _throttle_thrust_max) {
         throttle_thrust = _throttle_thrust_max;
-        limit.throttle_upper = true;
-    }
+        limit.throttle_upper = true;    }
 
     throttle_avg_max = constrain_float(throttle_avg_max, throttle_thrust, _throttle_thrust_max);
-
     float rp_thrust_max = MAX(fabsf(roll_thrust), fabsf(pitch_thrust));
 
     // calculate how much roll and pitch must be scaled to leave enough range for the minimum yaw
-    if (is_zero(rp_thrust_max)) {
-        rp_scale = 1.0f;
-    } else {
-        rp_scale = constrain_float((1.0f - MIN(fabsf(yaw_thrust), 0.5f * (float)_yaw_headroom / 1000.0f)) / rp_thrust_max, 0.0f, 1.0f);
-        if (rp_scale < 1.0f) {
-            limit.roll = true;
-            limit.pitch = true;
-        }
-    }
+    if (is_zero(rp_thrust_max)) {  rp_scale = 1.0f;  } 
+    else {  rp_scale = constrain_float((1.0f - MIN(fabsf(yaw_thrust), 0.5f * (float)_yaw_headroom / 1000.0f)) / rp_thrust_max, 0.0f, 1.0f);
+        if (rp_scale < 1.0f) {  limit.roll = true;  limit.pitch = true;  }  }
 
     actuator_allowed = 2.0f * (1.0f - rp_scale * rp_thrust_max);
     if (fabsf(yaw_thrust) > actuator_allowed) {
         yaw_thrust = constrain_float(yaw_thrust, -actuator_allowed, actuator_allowed);
-        limit.yaw = true;
-    }
+        limit.yaw = true;    }
 
     // calculate the minimum thrust that doesn't limit the roll, pitch and yaw forces
     thrust_min_rpy = MAX(fabsf(rp_scale * rp_thrust_max), fabsf(yaw_thrust));
 
     thr_adj = throttle_thrust - throttle_avg_max;
     if (thr_adj < (thrust_min_rpy - throttle_avg_max)) {
-        // Throttle can't be reduced to the desired level because this would reduce airflow over
-        // the control surfaces preventing roll and pitch reaching the desired level.
         thr_adj = MIN(thrust_min_rpy, throttle_avg_max) - throttle_avg_max;
     }
 
@@ -218,8 +158,6 @@ void AP_MotorsCoax::output_armed_stabilizing()
         limit.pitch = true;
         _actuator_out[1] = constrain_float(_actuator_out[1], -1.0f, 1.0f);
     }
-    _actuator_out[2] = -_actuator_out[0];
-    _actuator_out[3] = -_actuator_out[1];
 }
 
 // output_test_seq - spin a motor at the pwm value specified
@@ -227,39 +165,11 @@ void AP_MotorsCoax::output_armed_stabilizing()
 //  pwm value is an actual pwm value that will be output, normally in the range of 1000 ~ 2000
 void AP_MotorsCoax::output_test_seq(uint8_t motor_seq, int16_t pwm)
 {
-    // exit immediately if not armed
-    if (!armed()) {
-        return;
-    }
-
-    // output to motors and servos
-    switch (motor_seq) {
-        case 1:
-            // flap servo 1
-            rc_write(AP_MOTORS_MOT_1, pwm);
-            break;
-        case 2:
-            // flap servo 2
-            rc_write(AP_MOTORS_MOT_2, pwm);
-            break;
-        case 3:
-            // flap servo 3
-            rc_write(AP_MOTORS_MOT_3, pwm);
-            break;
-        case 4:
-            // flap servo 4
-            rc_write(AP_MOTORS_MOT_4, pwm);
-            break;
-        case 5:
-            // motor 1
-            rc_write(AP_MOTORS_MOT_5, pwm);
-            break;
-        case 6:
-            // motor 2
-            rc_write(AP_MOTORS_MOT_6, pwm);
-            break;
-        default:
-            // do nothing
-            break;
-    }
+    if (!armed()) {   return;  }
+    switch (motor_seq)    {
+        case 1: rc_write(AP_MOTORS_MOT_1, pwm);  break; // 舵面1
+        case 2: rc_write(AP_MOTORS_MOT_2, pwm);  break; // 舵面2
+        case 3: rc_write(AP_MOTORS_MOT_3, pwm);  break; // 电机1
+        case 4: rc_write(AP_MOTORS_MOT_4, pwm);  break; // 电机2
+        default:  break;  }
 }
