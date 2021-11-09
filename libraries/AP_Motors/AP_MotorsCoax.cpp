@@ -35,7 +35,6 @@ void AP_MotorsCoax::output_to_motors()
 {
     for (uint8_t i = 0; i < NUM_ACTUATORS; i++) 
         { rc_write_angle(AP_MOTORS_MOT_1 + i, _actuator_out[i] * AP_MOTORS_COAX_SERVO_INPUT_RANGE); }
-
     switch (_spool_state) {
         case SpoolState::SHUT_DOWN:
             // sends minimum values out to the motors
@@ -68,8 +67,7 @@ uint16_t AP_MotorsCoax::get_motor_mask()
     uint32_t motor_mask =  //  1U代表无符号整型的值为1，可以表示为00000000…1(最后一位为1，31个0，1个1)
     1U << AP_MOTORS_MOT_1 | 1U << AP_MOTORS_MOT_2 | 1U << AP_MOTORS_MOT_3 | 1U << AP_MOTORS_MOT_4;
     uint16_t mask = rc_map_mask(motor_mask);
-    // add parent's mask
-    mask |= AP_MotorsMulticopter::get_motor_mask();
+    mask |= AP_MotorsMulticopter::get_motor_mask(); // add parent's mask
     return mask;
 }
 
@@ -121,18 +119,15 @@ void AP_MotorsCoax::output_armed_stabilizing()
 
     thr_adj = throttle_thrust - throttle_avg_max;
     if (thr_adj < (thrust_min_rpy - throttle_avg_max)) {
-        thr_adj = MIN(thrust_min_rpy, throttle_avg_max) - throttle_avg_max;
-    }
+        thr_adj = MIN(thrust_min_rpy, throttle_avg_max) - throttle_avg_max; }
 
     // calculate the throttle setting for the lift fan
     thrust_out = throttle_avg_max + thr_adj;
-    // compensation_gain can never be zero
     _throttle_out = thrust_out / compensation_gain;
 
     if (fabsf(yaw_thrust) > thrust_out) {
         yaw_thrust = constrain_float(yaw_thrust, -thrust_out, thrust_out);
-        limit.yaw = true;
-    }
+        limit.yaw = true; }
 
     _thrust_yt_ccw = thrust_out + 0.5f * yaw_thrust;
     _thrust_yt_cw = thrust_out - 0.5f * yaw_thrust;
@@ -142,8 +137,7 @@ void AP_MotorsCoax::output_armed_stabilizing()
 
     if (is_zero(thrust_out)) {
         limit.roll = true;
-        limit.pitch = true;
-    }
+        limit.pitch = true;  }
     // force of a lifting surface is approximately equal to the angle of attack times the airflow velocity squared
     // static thrust is proportional to the airflow velocity squared
     // therefore the torque of the roll and pitch actuators should be approximately proportional to
@@ -152,12 +146,10 @@ void AP_MotorsCoax::output_armed_stabilizing()
     _actuator_out[1] = pitch_thrust / thrust_out_actuator;
     if (fabsf(_actuator_out[0]) > 1.0f) {
         limit.roll = true;
-        _actuator_out[0] = constrain_float(_actuator_out[0], -1.0f, 1.0f);
-    }
+        _actuator_out[0] = constrain_float(_actuator_out[0], -1.0f, 1.0f); }
     if (fabsf(_actuator_out[1]) > 1.0f) {
         limit.pitch = true;
-        _actuator_out[1] = constrain_float(_actuator_out[1], -1.0f, 1.0f);
-    }
+        _actuator_out[1] = constrain_float(_actuator_out[1], -1.0f, 1.0f); }
 }
 
 // output_test_seq - spin a motor at the pwm value specified
