@@ -4,46 +4,31 @@
 #include <AP_Math/AP_Math.h>
 #include "AP_MotorsTailsitter.h"
 #include <GCS_MAVLink/GCS.h>
-
 extern const AP_HAL::HAL& hal;
-
 #define SERVO_OUTPUT_RANGE  4500
 
 // init
 void AP_MotorsTailsitter::init(motor_frame_class frame_class, motor_frame_type frame_type)
 {
-    // setup default motor and servo mappings
-    uint8_t chan;
-
-    // right throttle defaults to servo output 1
+    uint8_t chan; // setup default motor and servo mappings
+    // 五个执行器分别对应 74 73 133 134 135
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleRight, CH_1);
     if (SRV_Channels::find_channel(SRV_Channel::k_throttleRight, chan)) { motor_enabled[chan] = true; }
-
-    // left throttle defaults to servo output 2
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleLeft, CH_2);
     if (SRV_Channels::find_channel(SRV_Channel::k_throttleLeft, chan)) { motor_enabled[chan] = true; }
-
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleFront, CH_3);
     if (SRV_Channels::find_channel(SRV_Channel::k_throttleFront, chan)) { motor_enabled[chan] = true; }
-
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleBack, CH_4);
     if (SRV_Channels::find_channel(SRV_Channel::k_throttleBack, chan)) { motor_enabled[chan] = true; }
-
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_tailServo, CH_5);
     SRV_Channels::set_angle(SRV_Channel::k_tailServo, SERVO_OUTPUT_RANGE);
-
     // record successful initialisation if what we setup was the desired frame_class
     _flags.initialised_ok = (frame_class == MOTOR_FRAME_TAILSITTER);
 }
 
-
 /// Constructor
-AP_MotorsTailsitter::AP_MotorsTailsitter(uint16_t loop_rate, uint16_t speed_hz) :
-    AP_MotorsMulticopter(loop_rate, speed_hz)
-{
-    set_update_rate(speed_hz);
-}
-
+AP_MotorsTailsitter::AP_MotorsTailsitter(uint16_t loop_rate, uint16_t speed_hz):
+AP_MotorsMulticopter(loop_rate, speed_hz) { set_update_rate(speed_hz); }
 
 // set update rate to motors - a value in hertz
 void AP_MotorsTailsitter::set_update_rate(uint16_t speed_hz)
@@ -57,8 +42,7 @@ void AP_MotorsTailsitter::set_update_rate(uint16_t speed_hz)
 
 void AP_MotorsTailsitter::output_to_motors()
 {
-    if (!_flags.initialised_ok) {        return;    }
-
+    if (!_flags.initialised_ok) { return; }
     switch (_spool_state) {
         case SpoolState::SHUT_DOWN:
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, get_pwm_output_min());
@@ -80,17 +64,10 @@ void AP_MotorsTailsitter::output_to_motors()
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, output_to_pwm(thrust_to_actuator(_thrust_right)));
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleFront, output_to_pwm(thrust_to_actuator(_thrust_front)));
             SRV_Channels::set_output_pwm(SRV_Channel::k_throttleBack, output_to_pwm(thrust_to_actuator(_thrust_back)));
-            break;
-    }
-
-    // Always output to tilt servos
+            break; }
     SRV_Channels::set_output_scaled(SRV_Channel::k_tailServo, _tilt_tail*SERVO_OUTPUT_RANGE);
-    // SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorRight, _tilt_right*SERVO_OUTPUT_RANGE);
-
 }
 
-// get_motor_mask - returns a bitmask of which outputs are being used for motors (1 means being used)
-//  this can be used to ensure other pwm outputs (i.e. for servos) do not conflict
 uint16_t AP_MotorsTailsitter::get_motor_mask()
 {
     uint32_t motor_mask = 0;
@@ -103,10 +80,7 @@ uint16_t AP_MotorsTailsitter::get_motor_mask()
         motor_mask |= 1U << chan;    }
     if (SRV_Channels::find_channel(SRV_Channel::k_throttleBack, chan)) {
         motor_mask |= 1U << chan;    }
-
-    // add parent's mask
     motor_mask |= AP_MotorsMulticopter::get_motor_mask();
-
     return motor_mask;
 }
 
@@ -136,18 +110,15 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
         limit.throttle_upper = true;    }
 
     // calculate left and right throttle outputs
-    _thrust_left  = throttle_thrust * 0.5f + roll_thrust * 0.5f;
-    _thrust_right = throttle_thrust * 0.5f - roll_thrust * 0.5f;
+    _thrust_left  = throttle_thrust * 0.06f + roll_thrust * 0.03f;
+    _thrust_right = throttle_thrust * 0.06f - roll_thrust * 0.03f;
     _thrust_front = throttle_thrust + pitch_thrust * 0.5f;
     _thrust_back  = throttle_thrust - pitch_thrust * 0.5f;
 
     // if max thrust is more than one reduce average throttle
-    thrust_max = MAX(_thrust_right,_thrust_left);
-    if (thrust_max > 1.0f) {
-        thr_adj = 1.0f - thrust_max;
-        limit.throttle_upper = true;
-        limit.roll = true;
-        limit.pitch = true;    }
+    thrust_max = MAX( MAX(_thrust_right,_thrust_left), MAX(_thrust_front,_thrust_back));
+    if (thrust_max > 1.0f) { thr_adj = 1.0f - thrust_max;
+        limit.throttle_upper = true; limit.roll = true; limit.pitch = true; }
 
     // Add adjustment to reduce average throttle
     _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
@@ -157,16 +128,13 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     _throttle = throttle_thrust + thr_adj;
     _throttle_out = _throttle / compensation_gain;
    
-    _tilt_left  =  yaw_thrust;  // thrust vectoring
+    _tilt_tail = yaw_thrust * 0.5f;  // thrust vectoring
 }
 
-// output_test_seq - spin a motor at the pwm value specified
-//  motor_seq is the motor's sequence number from 1 to the number of motors on the frame
-//  pwm value is an actual pwm value that will be output, normally in the range of 1000 ~ 2000
 void AP_MotorsTailsitter::output_test_seq(uint8_t motor_seq, int16_t pwm)
 {
     if (!armed()) { return; } // exit immediately if not armed
-    switch (motor_seq) { // output to motors and servos
+    switch (motor_seq)      { // output to motors and servos
         case 1: SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, pwm); break;
         case 2: SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, pwm); break;
         case 3: SRV_Channels::set_output_pwm(SRV_Channel::k_throttleFront, pwm); break;
