@@ -92,6 +92,7 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     float   yaw_thrust;                 // yaw thrust input value, +/- 1.0
     float   throttle_thrust;            // throttle thrust input value, 0.0 - 1.0
     float   thrust_max;                 // highest motor value
+    float   mode_switch;
     float   thr_adj = 0.0f;             // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
 
     // apply voltage and air pressure compensation
@@ -101,6 +102,8 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     yaw_thrust = (_yaw_in + _yaw_in_ff) * compensation_gain;
     throttle_thrust = get_throttle() * compensation_gain;
 
+    mode_switch = RC_Channels::get_radio_in(CH_5);          // 获取遥控器第5通道信号
+    
     // sanity check throttle is above zero and below current limited throttle
     if (throttle_thrust <= 0.0f) {
         throttle_thrust = 0.0f;
@@ -115,20 +118,41 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     _thrust_front = throttle_thrust + pitch_thrust * 0.5f;
     _thrust_back  = throttle_thrust - pitch_thrust * 0.5f;
 
+    // 仅测试总升力用
+    
+    _thrust_left  = throttle_thrust * 0.3f ;
+    _thrust_right = throttle_thrust * 0.3f ;
+    _thrust_front = throttle_thrust ;
+    _thrust_back  = throttle_thrust ; 
+    
     // if max thrust is more than one reduce average throttle
     thrust_max = MAX( MAX(_thrust_right,_thrust_left), MAX(_thrust_front,_thrust_back));
     if (thrust_max > 1.0f) { thr_adj = 1.0f - thrust_max;
-        limit.throttle_upper = true; limit.roll = true; limit.pitch = true; }
+    limit.throttle_upper = true; limit.roll = true; limit.pitch = true; }
 
     // Add adjustment to reduce average throttle
+
+    if (mode_switch > 1750.0f) {
     _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
     _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
     _thrust_front = constrain_float(_thrust_front + thr_adj, 0.0f, 1.0f);
-    _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f);
+    _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f); }
+
+    else if (mode_switch > 1250.0f) {
+    _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
+    _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
+    _thrust_front = 0.0f ;
+    _thrust_back  = 0.0f ; }
+
+    else if (mode_switch > 850.0f) {
+    _thrust_left  = 0.0f ;
+    _thrust_right = 0.0f ;
+    _thrust_front = constrain_float(_thrust_front + thr_adj, 0.0f, 1.0f);
+    _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f); }
+
     _throttle = throttle_thrust + thr_adj;
     _throttle_out = _throttle / compensation_gain;
-   
-    _tilt_tail = yaw_thrust * 0.5f;  // thrust vectoring
+    _tilt_tail = yaw_thrust * 0.0f;  // thrust vectoring
 }
 
 void AP_MotorsTailsitter::output_test_seq(uint8_t motor_seq, int16_t pwm)
