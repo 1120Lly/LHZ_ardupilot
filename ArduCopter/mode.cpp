@@ -75,6 +75,12 @@ Mode *Copter::mode_from_mode_num(const Mode::Number mode)
             ret = &mode_land;
             break;
 
+#if MODE_YAWGUIDE_ENABLED == ENABLED
+        case Mode::Number::YAWGUIDE:
+            ret = &mode_yawguide;
+            break;
+#endif            
+
 #if MODE_RTL_ENABLED == ENABLED
         case Mode::Number::RTL:
             ret = &mode_rtl;

@@ -952,6 +952,9 @@ private:
     ModeGuided mode_guided;
 #endif
     ModeLand mode_land;
+#if MODE_YAWGUIDE_ENABLED == ENABLED
+    ModeYawGuide mode_yawguide;
+#endif    
 #if MODE_LOITER_ENABLED == ENABLED
     ModeLoiter mode_loiter;
 #endif

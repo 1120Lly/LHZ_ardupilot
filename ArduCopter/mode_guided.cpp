@@ -3,7 +3,7 @@
 #if MODE_GUIDED_ENABLED == ENABLED
 
 /*
- * Init and run calls for guided flight mode
+ * Init and run calls for guided flight mode 初始化并运行引导飞行模式的调用
  */
 
 #ifndef GUIDED_LOOK_AT_TARGET_MIN_DISTANCE_CM
@@ -37,26 +37,25 @@ struct Guided_Limit {
     Vector3f start_pos; // start position as a distance from home in cm.  used for checking horiz_max limit
 } guided_limit;
 
-// guided_init - initialise guided controller
+// 初始化引导控制器 guided_init - initialise guided controller 
 bool ModeGuided::init(bool ignore_checks)
 {
-    // start in position control mode
-    pos_control_start();
+    // 在位置控制模式中启动 start in position control mode
+    pos_control_start(); // 初始化引导模式的位置控制器
     return true;
 }
 
-
-// do_user_takeoff_start - initialises waypoint controller to implement take-off
+// 起飞不重要，初始化航点控制器以执行起飞 do_user_takeoff_start - initialises waypoint controller to implement take-off
 bool ModeGuided::do_user_takeoff_start(float final_alt_above_home)
 {
     guided_mode = Guided_TakeOff;
 
-    // initialise wpnav destination
+    // 初始化航点导航目的地 initialise wpnav destination
     Location target_loc = copter.current_loc;
     target_loc.set_alt_cm(final_alt_above_home, Location::AltFrame::ABOVE_HOME);
 
     if (!wp_nav->set_wp_destination(target_loc)) {
-        // failure to set destination can only be because of missing terrain data
+        // 目的地设置失败只能是因为缺少地形数据 failure to set destination can only be because of missing terrain data
         AP::logger().Write_Error(LogErrorSubsystem::NAVIGATION, LogErrorCode::FAILED_TO_SET_DESTINATION);
         // failure is propagated to GCS with NAK
         return false;
@@ -74,27 +73,31 @@ bool ModeGuided::do_user_takeoff_start(float final_alt_above_home)
     return true;
 }
 
-// initialise guided mode's position controller
+// -------------------------------------------------------------------------------------------------------------
+// initialise guided mode's position controller 初始化引导模式的位置控制器
 void ModeGuided::pos_control_start()
 {
-    // set to position control mode
+    // set to position control mode 设置为位置/航点控制模式
     guided_mode = Guided_WP;
 
-    // initialise waypoint and spline controller
+    // initialise waypoint and spline controller 初始化航点和样条曲线控制器
     wp_nav->wp_and_spline_init();
-
-    // initialise wpnav to stopping point
+    
     Vector3f stopping_point;
-    wp_nav->get_wp_stopping_point(stopping_point);
+    
+    // 获取当前航点，初始化当前航点为导航停止点 initialise wpnav to stopping point 
+    wp_nav->get_wp_stopping_point(stopping_point); 
 
-    // no need to check return status because terrain data is not used
+    // 本质上，将当前位置设为位置控制启动的第一个航点，这个子函数非常重要
+    // no need to check return status because terrain data is not used 不需要检查返回状态，因为没有使用地形数据
     wp_nav->set_wp_destination(stopping_point, false);
 
-    // initialise yaw
+    // initialise yaw 初始化航向
     auto_yaw.set_mode_to_default(false);
-}
+}// -------------------------------------------------------------------------------------------------------------
 
-// initialise guided mode's velocity controller
+
+// initialise guided mode's velocity controller 初始化引导模式的速度控制器
 void ModeGuided::vel_control_start()
 {
     // set guided_mode to velocity controller
@@ -112,7 +115,7 @@ void ModeGuided::vel_control_start()
     pos_control->init_vel_controller_xyz();
 }
 
-// initialise guided mode's posvel controller
+// initialise guided mode's posvel controller 初始化引导模式的位置速度控制器
 void ModeGuided::posvel_control_start()
 {
     // set guided_mode to velocity controller
@@ -144,7 +147,7 @@ bool ModeGuided::is_taking_off() const
     return guided_mode == Guided_TakeOff;
 }
 
-// initialise guided mode's angle controller
+// initialise guided mode's angle controller 初始化引导模式的角度控制器
 void ModeGuided::angle_control_start()
 {
     // set guided_mode to velocity controller
@@ -176,6 +179,8 @@ void ModeGuided::angle_control_start()
 // guided_set_destination - sets guided mode's target destination
 // Returns true if the fence is enabled and guided waypoint is within the fence
 // else return false if the waypoint is outside the fence
+// 设置引导模式的目标目的地
+// 如果栅栏被启用并且引导的路标点在栅栏内，则返回true，否则如果路径点在栅栏外，则返回false
 bool ModeGuided::set_destination(const Vector3f& destination, bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_yaw)
 {
     // ensure we are in position control mode
@@ -193,17 +198,19 @@ bool ModeGuided::set_destination(const Vector3f& destination, bool use_yaw, floa
     }
 #endif
 
-    // set yaw state
+    // 设置偏航状态 set yaw state 
     set_yaw_state(use_yaw, yaw_cd, use_yaw_rate, yaw_rate_cds, relative_yaw);
 
-    // no need to check return status because terrain data is not used
+    // 实际的目标航点的刷新在这里
+    // 设置航点目的地 no need to check return status because terrain data is not used
     wp_nav->set_wp_destination(destination, false);
 
-    // log target
+    // 记录航点日志 log target
     copter.Log_Write_GuidedTarget(guided_mode, destination, Vector3f());
     return true;
 }
 
+// 获取目标航点
 bool ModeGuided::get_wp(Location& destination)
 {
     if (guided_mode != Guided_WP) {
@@ -215,6 +222,8 @@ bool ModeGuided::get_wp(Location& destination)
 // sets guided mode's target from a Location object
 // returns false if destination could not be set (probably caused by missing terrain data)
 // or if the fence is enabled and guided waypoint is outside the fence
+// 从定位对象中设置引导模式的目标（设置的是标准经纬度目标航点）
+// 如果无法设置目的地，或围栏启用，引导航点在围栏外，则返回false(可能是由于缺少地形数据造成的)
 bool ModeGuided::set_destination(const Location& dest_loc, bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_yaw)
 {
     // ensure we are in position control mode
@@ -247,7 +256,7 @@ bool ModeGuided::set_destination(const Location& dest_loc, bool use_yaw, float y
     return true;
 }
 
-// guided_set_velocity - sets guided mode's target velocity
+// 设置引导模式的目标速度 guided_set_velocity - sets guided mode's target velocity
 void ModeGuided::set_velocity(const Vector3f& velocity, bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_yaw, bool log_request)
 {
     // check we are in velocity control mode
@@ -268,7 +277,7 @@ void ModeGuided::set_velocity(const Vector3f& velocity, bool use_yaw, float yaw_
     }
 }
 
-// set guided mode posvel target
+// 设置引导模式目标位置速度 set guided mode posvel target
 bool ModeGuided::set_destination_posvel(const Vector3f& destination, const Vector3f& velocity, bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_yaw)
 {
     // check we are in velocity control mode
@@ -300,7 +309,7 @@ bool ModeGuided::set_destination_posvel(const Vector3f& destination, const Vecto
     return true;
 }
 
-// set guided mode angle target
+// 设置引导模式的目标角度 set guided mode angle target
 void ModeGuided::set_angle(const Quaternion &q, float climb_rate_cms, bool use_yaw_rate, float yaw_rate_rads)
 {
     // check we are in velocity control mode
@@ -330,7 +339,7 @@ void ModeGuided::set_angle(const Quaternion &q, float climb_rate_cms, bool use_y
                            Vector3f(0.0f, 0.0f, guided_angle_state.climb_rate_cms));
 }
 
-// guided_run - runs the guided controller
+// 引导模式以400hz运行 guided_run - runs the guided controller
 // should be called at 100hz or more
 void ModeGuided::run()
 {
@@ -415,43 +424,44 @@ void Mode::auto_takeoff_run()
     auto_takeoff_attitude_run(target_yaw_rate);
 }
 
-// guided_pos_control_run - runs the guided position controller
+// 运行引导模式位置控制器 guided_pos_control_run - runs the guided position controller
 // called from guided_run
 void ModeGuided::pos_control_run()
 {
-    // process pilot's yaw input
+    // 处理飞手的航向输入，将目标航向速率设为零 process pilot's yaw input
     float target_yaw_rate = 0;
-    if (!copter.failsafe.radio) {
-        // get pilot's desired yaw rate
+    if (!copter.failsafe.radio) { // 如果遥控器没有失控保护
+        // 将遥控器的航向摇杆直接映射为期望/目标航向速率 get pilot's desired yaw rate
         target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->get_control_in());
-        if (!is_zero(target_yaw_rate)) {
-            auto_yaw.set_mode(AUTO_YAW_HOLD);
+        if (!is_zero(target_yaw_rate)) { // 如果目标航向速率不为零
+            auto_yaw.set_mode(AUTO_YAW_HOLD); // 则设为自动航向锁定
         }
     }
 
-    // if not armed set throttle to zero and exit immediately
+    // 如果没有解锁，则将油门设为零并立即退出 if not armed set throttle to zero and exit immediately
     if (is_disarmed_or_landed()) {
         make_safe_spool_down();
-        return;
-    }
+        return;    }
 
-    // set motors to full range
+    // 将电机设为满油门行程 set motors to full range
     motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
-    // run waypoint controller
-    copter.failsafe_terrain_set_status(wp_nav->update_wpnav());
+    // 运行航点控制器，控制水平方向的运动 run waypoint controller
+    copter.failsafe_terrain_set_status(wp_nav->update_wpnav()); // 主要运行update_wpnav
 
-    // call z-axis position controller (wpnav should have already updated it's alt target)
+    // 运行竖直位置控制器，应当已经更新目标高度 call z-axis position controller 
+    // wpnav should have already updated it's alt target
     pos_control->update_z_controller();
 
-    // call attitude controller
-    if (auto_yaw.mode() == AUTO_YAW_HOLD) {
+    // 水平和竖直的位置控制器运行后，会得到三个轴的目标角度，赋值给下列函数
+    // 运行姿态控制器 call attitude controller
+    if (auto_yaw.mode() == AUTO_YAW_HOLD) { // 如果处于自动航向锁定模式
         // roll & pitch from waypoint controller, yaw rate from pilot
         attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), target_yaw_rate);
-    } else if (auto_yaw.mode() == AUTO_YAW_RATE) {
+    } else if (auto_yaw.mode() == AUTO_YAW_RATE) { // 和上面一样
         // roll & pitch from waypoint controller, yaw rate from mavlink command or mission item
         attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), auto_yaw.rate_cds());
-    } else {
+    } else { // 三个轴全部为角度控制
         // roll, pitch from waypoint controller, yaw heading from GCS or auto_heading()
         attitude_control->input_euler_angle_roll_pitch_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), auto_yaw.yaw(), true);
     }
