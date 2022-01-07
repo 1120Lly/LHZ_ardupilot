@@ -87,22 +87,23 @@ uint16_t AP_MotorsTailsitter::get_motor_mask()
 // calculate outputs to the motors
 void AP_MotorsTailsitter::output_armed_stabilizing()
 {
-    float   roll_thrust;                // roll thrust input value, +/- 1.0
-    float   pitch_thrust;               // pitch thrust input value, +/- 1.0
-    float   yaw_thrust;                 // yaw thrust input value, +/- 1.0
+    // float   roll_thrust;                // roll thrust input value, +/- 1.0
+    // float   pitch_thrust;               // pitch thrust input value, +/- 1.0
+    // float   yaw_thrust;                 // yaw thrust input value, +/- 1.0
     float   throttle_thrust;            // throttle thrust input value, 0.0 - 1.0
     float   thrust_max;                 // highest motor value
-    float   mode_switch;
+    // float   mode_switch;                // 遥控器第5通道，用于测试升力时切换模式
     float   thr_adj = 0.0f;             // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
 
     // apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
-    roll_thrust = (_roll_in + _roll_in_ff) * compensation_gain;
-    pitch_thrust = (_pitch_in + _pitch_in_ff) * compensation_gain;
-    yaw_thrust = (_yaw_in + _yaw_in_ff) * compensation_gain;
+    // roll_thrust = (_roll_in + _roll_in_ff) * compensation_gain;
+    // pitch_thrust = (_pitch_in + _pitch_in_ff) * compensation_gain;
+    // yaw_thrust = (_yaw_in + _yaw_in_ff) * compensation_gain;
     throttle_thrust = get_throttle() * compensation_gain;
 
-    mode_switch = RC_Channels::get_radio_in(CH_5);          // 获取遥控器第5通道信号
+    // 获取遥控器第5通道信号，用于测试升力时切换模式
+    // mode_switch = RC_Channels::get_radio_in(CH_5);
     
     // sanity check throttle is above zero and below current limited throttle
     if (throttle_thrust <= 0.0f) {
@@ -112,47 +113,66 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
         throttle_thrust = _throttle_thrust_max;
         limit.throttle_upper = true;    }
 
-    // calculate left and right throttle outputs
-    _thrust_left  = throttle_thrust * 0.06f + roll_thrust * 0.03f;
-    _thrust_right = throttle_thrust * 0.06f - roll_thrust * 0.03f;
-    _thrust_front = throttle_thrust + pitch_thrust * 0.5f;
-    _thrust_back  = throttle_thrust - pitch_thrust * 0.5f;
+    //------------------------------------------------------------------------------------------
+    // 正常使用增稳控制输出飞行
+    // _thrust_left  = (throttle_thrust + roll_thrust * 0.5f) * 0.06f;
+    // _thrust_right = (throttle_thrust - roll_thrust * 0.5f) * 0.06f;
+    // _thrust_front = throttle_thrust + pitch_thrust * 0.5f;
+    // _thrust_back  = throttle_thrust - pitch_thrust * 0.5f;
+    //------------------------------------------------------------------------------------------
 
-    // 仅测试总升力用
-    
-    _thrust_left  = throttle_thrust * 0.3f ;
-    _thrust_right = throttle_thrust * 0.3f ;
-    _thrust_front = throttle_thrust ;
-    _thrust_back  = throttle_thrust ; 
-    
+    //------------------------------------------------------------------------------------------
+    // 直接映射遥控器输入，用于测试三轴操纵力矩，其中扑翼频率不能过高
+    _thrust_left  = (throttle_thrust + _roll_radio_passthrough * 0.5f) * 0.06f;
+    _thrust_right = (throttle_thrust - _roll_radio_passthrough * 0.5f) * 0.06f;
+    _thrust_front = throttle_thrust + _pitch_radio_passthrough * 0.5f;
+    _thrust_back  = throttle_thrust - _pitch_radio_passthrough * 0.5f;
+    //------------------------------------------------------------------------------------------
+
+    //------------------------------------------------------------------------------------------
+    // 直接输出油门，用于测试升力，其中扑翼频率不能过高，否则会损坏扑动机构
+    // _thrust_left  = throttle_thrust * 0.3f ;
+    // _thrust_right = throttle_thrust * 0.3f ;
+    // _thrust_front = throttle_thrust ;
+    // _thrust_back  = throttle_thrust ; 
+    //------------------------------------------------------------------------------------------
+       
     // if max thrust is more than one reduce average throttle
     thrust_max = MAX( MAX(_thrust_right,_thrust_left), MAX(_thrust_front,_thrust_back));
     if (thrust_max > 1.0f) { thr_adj = 1.0f - thrust_max;
     limit.throttle_upper = true; limit.roll = true; limit.pitch = true; }
 
     // Add adjustment to reduce average throttle
-
-    if (mode_switch > 1750.0f) {
     _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
     _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
     _thrust_front = constrain_float(_thrust_front + thr_adj, 0.0f, 1.0f);
-    _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f); }
+    _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f);
 
-    else if (mode_switch > 1250.0f) {
-    _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
-    _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
-    _thrust_front = 0.0f ;
-    _thrust_back  = 0.0f ; }
-
-    else if (mode_switch > 850.0f) {
-    _thrust_left  = 0.0f ;
-    _thrust_right = 0.0f ;
-    _thrust_front = constrain_float(_thrust_front + thr_adj, 0.0f, 1.0f);
-    _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f); }
+    //------------------------------------------------------------------------------------------
+    // 用于切换模式，分别测试混合动力总升力、纯扑翼升力、纯旋翼升力
+    // if (mode_switch > 1750.0f) {
+    // _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
+    // _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
+    // _thrust_front = constrain_float(_thrust_front + thr_adj, 0.0f, 1.0f);
+    // _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f); }
+    // else if (mode_switch > 1250.0f) {
+    // _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
+    // _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
+    // _thrust_front = 0.0f ;
+    // _thrust_back  = 0.0f ; }
+    // else if (mode_switch > 850.0f) {
+    // _thrust_left  = 0.0f ;
+    // _thrust_right = 0.0f ;
+    // _thrust_front = constrain_float(_thrust_front + thr_adj, 0.0f, 1.0f);
+    // _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f); }
+    //------------------------------------------------------------------------------------------
 
     _throttle = throttle_thrust + thr_adj;
     _throttle_out = _throttle / compensation_gain;
-    _tilt_tail = yaw_thrust * 0.0f;  // thrust vectoring
+
+    // 航向矢量舵机，在测试升力时，应将系数设为0
+    // _tilt_tail = yaw_thrust * 0.5f;  
+    _tilt_tail = _yaw_radio_passthrough * 0.5f;  
 }
 
 void AP_MotorsTailsitter::output_test_seq(uint8_t motor_seq, int16_t pwm)
