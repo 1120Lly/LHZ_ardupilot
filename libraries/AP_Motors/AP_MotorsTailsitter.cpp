@@ -115,8 +115,8 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
 
     //------------------------------------------------------------------------------------------
     // 正常使用增稳控制输出飞行
-    _thrust_left  = (throttle_thrust + roll_thrust * 0.5f) * 0.3f;
-    _thrust_right = (throttle_thrust - roll_thrust * 0.5f) * 0.3f;
+    _thrust_left  = (throttle_thrust + roll_thrust * 0.5f) * 0.1f;
+    _thrust_right = (throttle_thrust - roll_thrust * 0.5f) * 0.1f;
     _thrust_front = throttle_thrust + pitch_thrust * 0.5f;
     _thrust_back  = throttle_thrust - pitch_thrust * 0.5f;
     _tilt_tail    = yaw_thrust * 0.5f;
@@ -156,13 +156,13 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     //------------------------------------------------------------------------------------------
     // 用于常规飞行以及飞爬飞转换，需要配合角速度模式或手动模式使用
     if (mode_switch > 1750.0f) {
-    _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
-    _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
+    _thrust_left  = 0.0f ;
+    _thrust_right = 0.0f ;
     _thrust_front = constrain_float(_thrust_front + thr_adj, 0.0f, 1.0f);
     _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f); }
     else if (mode_switch > 850.0f) {
-    _thrust_left  = 0.0f ;
-    _thrust_right = 0.0f ;
+    _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
+    _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
     _thrust_front = constrain_float(_thrust_front + thr_adj, 0.0f, 1.0f);
     _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f); }
     //------------------------------------------------------------------------------------------
