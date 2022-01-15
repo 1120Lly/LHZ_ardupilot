@@ -4,6 +4,7 @@
 #include <AP_Math/AP_Math.h>
 #include "AP_MotorsTailsitter.h"
 #include <GCS_MAVLink/GCS.h>
+#include <AP_AHRS/AP_AHRS.h>
 extern const AP_HAL::HAL& hal;
 #define SERVO_OUTPUT_RANGE  4500
 
@@ -92,8 +93,13 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     float   yaw_thrust;                 // yaw thrust input value, +/- 1.0
     float   throttle_thrust;            // throttle thrust input value, 0.0 - 1.0
     float   thrust_max;                 // highest motor value
-    float   mode_switch;                // 遥控器第5通道，用于测试升力时切换模式
     float   thr_adj = 0.0f;             // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
+    // float   mode_switch = RC_Channels::get_radio_in(CH_5);  // 获取遥控器第5通道信号，用于测试升力时切换模式
+    float   pitch_angle = 0.0f;         // 飞行器俯仰欧拉角，竖直90度姿态对应值为1.57rad
+    Vector3f euler;
+    
+    const AP_AHRS &ahrs = AP::ahrs();   // 获取飞行器姿态角
+    if (ahrs.get_secondary_attitude(euler))  { pitch_angle = fabsf( euler.y ); }
 
     // apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
@@ -101,10 +107,7 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     pitch_thrust = (_pitch_in + _pitch_in_ff) * compensation_gain;
     yaw_thrust = (_yaw_in + _yaw_in_ff) * compensation_gain;
     throttle_thrust = get_throttle() * compensation_gain;
-
-    // 获取遥控器第5通道信号，用于测试升力时切换模式
-    mode_switch = RC_Channels::get_radio_in(CH_5);
-    
+        
     // sanity check throttle is above zero and below current limited throttle
     if (throttle_thrust <= 0.0f) {
         throttle_thrust = 0.0f;
@@ -114,12 +117,28 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
         limit.throttle_upper = true;    }
 
     //------------------------------------------------------------------------------------------
+    // 用于飞爬转换时，根据飞机俯仰角自动切换模式
+    if (pitch_angle >= 1.0f) {
+    _thrust_left  = 0.0f ;
+    _thrust_right = 0.0f ;
+    _thrust_front = throttle_thrust + _pitch_radio_passthrough * 0.3f + 0.2f;
+    _thrust_back  = throttle_thrust - _pitch_radio_passthrough * 0.3f + 0.2f;
+    _tilt_tail    = _yaw_radio_passthrough * 0.5f; }
+    else if (pitch_angle < 1.0f) {
+    _thrust_left  = (throttle_thrust + roll_thrust * 0.5f) * 0.1f + 0.1f;
+    _thrust_right = (throttle_thrust - roll_thrust * 0.5f) * 0.1f + 0.1f;
+    _thrust_front = throttle_thrust + pitch_thrust * 0.5f; 
+    _thrust_back  = throttle_thrust - pitch_thrust * 0.5f; 
+    _tilt_tail    = yaw_thrust * 0.5f; }
+    //------------------------------------------------------------------------------------------    
+    
+    //------------------------------------------------------------------------------------------
     // 正常使用增稳控制输出飞行
-    _thrust_left  = (throttle_thrust + roll_thrust * 0.5f) * 0.1f;
-    _thrust_right = (throttle_thrust - roll_thrust * 0.5f) * 0.1f;
-    _thrust_front = throttle_thrust + pitch_thrust * 0.5f;
-    _thrust_back  = throttle_thrust - pitch_thrust * 0.5f;
-    _tilt_tail    = yaw_thrust * 0.5f;
+    // _thrust_left  = (throttle_thrust + roll_thrust * 0.5f) * 0.1f + 0.1f;
+    // _thrust_right = (throttle_thrust - roll_thrust * 0.5f) * 0.1f + 0.1f;
+    // _thrust_front = throttle_thrust + pitch_thrust * 0.5f; //  + 0.1f;
+    // _thrust_back  = throttle_thrust - pitch_thrust * 0.5f; //  + 0.1f;
+    // _tilt_tail    = yaw_thrust * 0.5f;
     //------------------------------------------------------------------------------------------
 
     //------------------------------------------------------------------------------------------
@@ -146,25 +165,23 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     limit.throttle_upper = true; limit.roll = true; limit.pitch = true; }
 
     //------------------------------------------------------------------------------------------
-    // 用于常规悬停飞行或测试三轴操纵力矩
-    // _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
-    // _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
-    // _thrust_front = constrain_float(_thrust_front + thr_adj, 0.0f, 1.0f);
-    // _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f);
+    // 用于常规输出、悬停飞行或测试三轴操纵力矩
+    _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
+    _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
+    _thrust_front = constrain_float(_thrust_front + thr_adj, 0.0f, 1.0f);
+    _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f);
     //------------------------------------------------------------------------------------------
     
     //------------------------------------------------------------------------------------------
     // 用于常规飞行以及飞爬飞转换，需要配合角速度模式或手动模式使用
-    if (mode_switch > 1750.0f) {
-    _thrust_left  = 0.0f ;
-    _thrust_right = 0.0f ;
-    _thrust_front = constrain_float(_thrust_front + thr_adj, 0.0f, 1.0f);
-    _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f); }
-    else if (mode_switch > 850.0f) {
-    _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
-    _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f);
-    _thrust_front = constrain_float(_thrust_front + thr_adj, 0.0f, 1.0f);
-    _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f); }
+    // if (mode_switch > 1750.0f) {
+    // _thrust_left  = 0.0f ;
+    // _thrust_right = 0.0f ;     }
+    // else if (mode_switch > 850.0f) {
+    // _thrust_left  = constrain_float(_thrust_left  + thr_adj, 0.0f, 1.0f);
+    // _thrust_right = constrain_float(_thrust_right + thr_adj, 0.0f, 1.0f); }
+    // _thrust_front = constrain_float(_thrust_front + thr_adj, 0.0f, 1.0f);
+    // _thrust_back  = constrain_float(_thrust_back  + thr_adj, 0.0f, 1.0f); 
     //------------------------------------------------------------------------------------------
     
     //------------------------------------------------------------------------------------------
@@ -188,7 +205,6 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
 
     _throttle = throttle_thrust + thr_adj;
     _throttle_out = _throttle / compensation_gain;
- 
 }
 
 void AP_MotorsTailsitter::output_test_seq(uint8_t motor_seq, int16_t pwm)
