@@ -121,8 +121,8 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     if (pitch_angle >= 1.0f) {
     _thrust_left  = 0.0f ;
     _thrust_right = 0.0f ;
-    _thrust_front = throttle_thrust + _pitch_radio_passthrough * 0.3f + 0.2f;
-    _thrust_back  = throttle_thrust - _pitch_radio_passthrough * 0.3f + 0.2f;
+    _thrust_front = _throttle_radio_passthrough + _pitch_radio_passthrough * 0.3f + 0.25f;
+    _thrust_back  = _throttle_radio_passthrough - _pitch_radio_passthrough * 0.3f - 0.25f;
     _tilt_tail    = _yaw_radio_passthrough * 0.5f; }
     else if (pitch_angle < 1.0f) {
     _thrust_left  = (throttle_thrust + roll_thrust * 0.5f) * 0.1f + 0.1f;
