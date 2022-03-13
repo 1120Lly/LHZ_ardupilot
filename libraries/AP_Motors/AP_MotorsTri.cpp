@@ -96,10 +96,13 @@ void AP_MotorsTri::output_armed_stabilizing()
     float   throttle_thrust;     // throttle thrust input value, 0.0 - 1.0
     float   thrust_max;          // highest motor value
     float   thr_adj = 0.0f;      // 飞行员期望油门和throttle_thrust_best_rpy之间的差值
+    float   forward;
     float   rotate_angle;        // 旋转角输入值，最左为0，最右为1
-    float   rate;                // 俯仰控制权重，水平为0，朝下为1，朝上为-1
-    float   m_rate;              // 电机俯仰控制权重，水平为1，朝下为0，朝上为0
-    float   s_rate;              // 舵机俯仰控制权重，水平为0，朝下为1，朝上为1
+    // float   rate;                // 俯仰控制权重，水平为0，朝下为1，朝上为-1
+    float   beta;                // 期望俯仰变姿角，水平为0，朝下为1，朝上为-1
+    float   sinbeta, cosbeta;    // 期望俯仰变姿角正弦余弦
+    // float   m_rate;              // 电机俯仰控制权重，水平为1，朝下为0，朝上为0
+    // float   s_rate;              // 舵机俯仰控制权重，水平为0，朝下为1，朝上为1
 
     // apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
@@ -108,12 +111,17 @@ void AP_MotorsTri::output_armed_stabilizing()
     yaw_thrust = (_yaw_in + _yaw_in_ff) * compensation_gain; 
     throttle_thrust = get_throttle() * compensation_gain;
    
-    // 旋转角与俯仰控制权重
-    rotate_angle = RC_Channels::get_radio_in(CH_6);          // 获取遥控器第6通道信号
-    rotate_angle= (rotate_angle -1500) *0.002f;              // 转换为标准值
-    rate = rotate_angle;
-    if (rate >= 0.0f) { m_rate= 1.0f -rate; s_rate= rate; }  // 电机俯仰控制权重恒正
-    if (rate <  0.0f) { m_rate= 1.0f +rate; s_rate=-rate; }
+    // 俯仰角与前进量的标准化
+    rotate_angle = RC_Channels::get_radio_in(CH_6);   // 获取遥控器第6通道信号
+    forward = RC_Channels::get_radio_in(CH_2);        // 获取遥控器第2通道信号
+    rotate_angle= (rotate_angle -1500) *0.002f;       // 转换为标准值，水平为0，朝上为-1，朝下为1
+    forward= (forward -1500) *0.002f;                 // 转换为标准值，水平为0，向后为-1，向前为1
+    // rate =  rotate_angle;
+    beta = -rotate_angle *1.57f;                      // 期望俯仰变姿角，水平为0，朝上为1.57，朝下为-1.57
+    sinbeta = sinf(beta);                              // 期望俯仰变姿角正弦，水平为0，朝上为1，朝下为-1
+    cosbeta = cosf(beta);                              // 期望俯仰变姿角余弦，水平为1，朝上为0，朝下为0
+    // if (rate >= 0.0f) { m_rate= 1.0f -rate; s_rate= rate; }  // 电机俯仰控制权重恒正
+    // if (rate <  0.0f) { m_rate= 1.0f +rate; s_rate=-rate; }
 
     // sanity check throttle is above zero and below current limited throttle
     if (throttle_thrust <= 0.0f) 
@@ -121,23 +129,37 @@ void AP_MotorsTri::output_armed_stabilizing()
     if (throttle_thrust >= _throttle_thrust_max) 
     { throttle_thrust = _throttle_thrust_max; limit.throttle_upper = true; }
 
-    // 电机控制分配 calculate left and right throttle outputs
-    _thrust_left  =  throttle_thrust + m_rate *pitch_thrust *0.4f - roll_thrust *0.45f;
-    _thrust_right =  throttle_thrust + m_rate *pitch_thrust *0.4f + roll_thrust *0.45f;
-    _thrust_tail  =  throttle_thrust - m_rate *pitch_thrust *0.6f ;
+    // 旧电机控制分配 calculate left and right throttle outputs
+    // _thrust_left  =  throttle_thrust + m_rate *pitch_thrust *0.4f - roll_thrust *0.45f;
+    // _thrust_right =  throttle_thrust + m_rate *pitch_thrust *0.4f + roll_thrust *0.45f;
+    // _thrust_tail  =  throttle_thrust - m_rate *pitch_thrust *0.6f ;
 
-    // 航向控制在大角度时适度减弱
-     yaw_thrust = yaw_thrust - s_rate *yaw_thrust *0.4f;
+    // 新电机控制分配 calculate left and right throttle outputs
+    // 后续优化中，可以考虑增大尾旋翼的权重，减小主旋翼的权重
+    _thrust_left  =  throttle_thrust + cosbeta *pitch_thrust *0.3f - roll_thrust *0.45f;
+    _thrust_right =  throttle_thrust + cosbeta *pitch_thrust *0.3f + roll_thrust *0.45f;
+    _thrust_tail  =  throttle_thrust - cosbeta *pitch_thrust *0.6f ;
 
-    // 舵机控制分配，向上和向下的俯仰控制参与者不同
-    if (rotate_angle <= 0.0f)  {
-        _tilt_left    = -rotate_angle *0.7f - s_rate *pitch_thrust *0.2f - yaw_thrust *0.3f;
-        _tilt_right   =  rotate_angle *0.7f + s_rate *pitch_thrust *0.2f - yaw_thrust *0.3f;
-        _tilt_tail    =  rotate_angle *0.7f - s_rate *pitch_thrust *0.5f; }
-    if (rotate_angle > 0.0f)   {
-        _tilt_left    = -rotate_angle *0.7f + s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
-        _tilt_right   =  rotate_angle *0.7f - s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
-        _tilt_tail    =  rotate_angle *0.7f + s_rate *pitch_thrust *0.4f; }
+    // 旧航向控制在大角度时适度减弱
+    // yaw_thrust = yaw_thrust - s_rate *yaw_thrust *0.4f;
+
+    // 由于转动惯量减小，新航向控制在大角度时适度减弱
+    yaw_thrust = (0.6f + cosbeta *0.4f) *yaw_thrust;
+
+    // 旧舵机控制分配，向上和向下的俯仰控制参与者不同
+    // if (rotate_angle <= 0.0f)  {
+    //     _tilt_left    = -rotate_angle *0.7f - s_rate *pitch_thrust *0.2f - yaw_thrust *0.3f;
+    //     _tilt_right   =  rotate_angle *0.7f + s_rate *pitch_thrust *0.2f - yaw_thrust *0.3f;
+    //     _tilt_tail    =  rotate_angle *0.7f - s_rate *pitch_thrust *0.5f; }
+    // if (rotate_angle > 0.0f)   {
+    //     _tilt_left    = -rotate_angle *0.7f + s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
+    //     _tilt_right   =  rotate_angle *0.7f - s_rate *pitch_thrust *0.3f - yaw_thrust *0.3f;
+    //     _tilt_tail    =  rotate_angle *0.7f + s_rate *pitch_thrust *0.4f; }
+    
+    // 新舵机控制分配
+    _tilt_left    = -rotate_angle *0.7f + forward *0.2f - sinbeta *pitch_thrust *0.2f - yaw_thrust *0.3f;
+    _tilt_right   =  rotate_angle *0.7f - forward *0.2f + sinbeta *pitch_thrust *0.2f - yaw_thrust *0.3f;
+    _tilt_tail    =  rotate_angle *0.7f - forward *0.1f - sinbeta *pitch_thrust *0.4f;
 
    // 如果最大推力大于1，则降低平均油门
     thrust_max = MAX(_thrust_right,_thrust_left);
