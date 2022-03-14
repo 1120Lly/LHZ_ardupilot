@@ -112,8 +112,17 @@ void AP_MotorsTri::output_armed_stabilizing()
     throttle_thrust = get_throttle() * compensation_gain;
    
     // 俯仰角与前进量的标准化
-    rotate_angle = RC_Channels::get_radio_in(CH_6);   // 获取遥控器第6通道信号
+    // rotate_angle = RC_Channels::get_radio_in(CH_6,8);   // 获取遥控器第6通道信号
     forward = RC_Channels::get_radio_in(CH_2);        // 获取遥控器第2通道信号
+
+
+    uint16_t values[8] = {};
+    rc().get_radio_in(values, ARRAY_SIZE(values));
+    rotate_angle = values[5];
+
+
+
+    // forward = hal.rcin->read(CH_2);        // 获取遥控器第2通道信号
     rotate_angle= (rotate_angle -1500) *0.002f;       // 转换为标准值，水平为0，朝上为-1，朝下为1
     forward= (forward -1500) *0.002f;                 // 转换为标准值，水平为0，向后为-1，向前为1
     // rate =  rotate_angle;
