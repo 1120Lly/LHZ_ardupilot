@@ -3,6 +3,9 @@
 #include "AP_AHRS_View.h"
 #include <stdio.h>
 
+Matrix3f board_rotation;
+uint16_t rcin[8] = {};
+
 AP_AHRS_View::AP_AHRS_View(AP_AHRS &_ahrs, enum Rotation _rotation, float pitch_trim_deg) :
     rotation(_rotation),
     ahrs(_ahrs)
@@ -32,8 +35,9 @@ void AP_AHRS_View::set_pitch_trim(float trim_deg) {
 // update state
 void AP_AHRS_View::update(bool skip_ins_update)
 {
-    Matrix3f board_rotation;                                    // 新加语句
-    float board_rotate = RC_Channels::get_radio_in(CH_6);       // 新加语句，获取遥控器第6通道信号
+    rc().get_radio_in (rcin, 8);
+    float board_rotate = rcin[6];
+    // float board_rotate = RC_Channels::get_radio_in(CH_6);       // 新加语句，获取遥控器第6通道信号
     board_rotate= (board_rotate -1500) *0.2f;                   // 新加语句，转换为最大倾斜角度
     board_rotation.from_euler(radians(0), radians(-board_rotate), radians(0)); // 新加语句
     rot_body_to_ned = ahrs.get_rotation_body_to_ned();          // 原有语句
@@ -57,9 +61,10 @@ void AP_AHRS_View::update(bool skip_ins_update)
 // return a smoothed and corrected gyro vector using the latest ins data (which may not have been consumed by the EKF yet)
 Vector3f AP_AHRS_View::get_gyro_latest(void) const 
 {   // 此处对get_gyro_latest进行俯仰旋转，经测试验证，方法可行且稳定，可用于姿态角速率控制
-    Matrix3f board_rotation;
     Vector3f gyro_latest = ahrs.get_gyro_latest();              // 原有语句，获取最新的陀螺仪数据
-    float board_rotate = RC_Channels::get_radio_in(CH_6);       // 获取遥控器第6通道信号
+    rc().get_radio_in (rcin, 8);
+    float board_rotate = rcin[6];
+    // float board_rotate = RC_Channels::get_radio_in(CH_6);       // 获取遥控器第6通道信号
     board_rotate= (board_rotate -1500) *0.2f;                   // 转换为最大倾斜角度
     board_rotation.from_euler(radians(0), radians(-board_rotate), radians(0)); // 新加语句
     gyro_latest.rotate(rotation);                               // 原有语句，陀螺仪数据进行原本程序的角度旋转

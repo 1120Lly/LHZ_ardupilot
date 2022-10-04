@@ -13,7 +13,7 @@ uint32_t now_ms;
 uint32_t last_ms;
 uint32_t dt_ms;
 uint16_t chan6 = 1500;
-
+uint8_t  mspus = 15; 
 /*
   channels group object constructor
  */
@@ -47,30 +47,32 @@ uint8_t RC_Channels::get_radio_in(uint16_t *chans, const uint8_t num_channels)
 
     for (uint8_t i = 0; i < read_channels; i++) 
     {
-        if (i==6)
+        if ( i == 6 )
         {   
-            if( chans[5]<=1200 ) // 旋钮位于下端，则向下移动
-            {   if (dt_ms>100)  { chan6 = chan6 - 1; chans[6] = chan6; dt_ms = 0; }
-                else  { chan6 = chan6;  chans[6] = chan6; } }
-            if( chans[5]>1200 && chans[5]<1450 ) // 旋钮位于下部，则保持不动
-            {   chan6 = chan6;  chans[6] = chan6; }
-            if( chans[5]>=1450 && chans[5]<=1550 ) // 旋钮位于中间，则向中间移动
+            if( chans[5] <= 1200 ) // 旋钮位于下端，则向下移动
+            {   if ( dt_ms > mspus ) { chan6 = chan6 - 1; dt_ms = 0; }
+                else  { chan6 = chan6; } }
+            if( chans[5] > 1200 && chans[5] < 1450 ) // 旋钮位于下部，则保持不动
+            {   chan6 = chan6; }
+            if( chans[5] >= 1450 && chans[5] <= 1550 ) // 旋钮位于中间，则向中间移动
             { 
-                if(chan6<1499) // 如果在下，就上行
-                {   if (dt_ms>100)  { chan6 = chan6 + 1; chans[6] = chan6; dt_ms = 0; }
-                    else  { chan6 = chan6;  chans[6] = chan6; } }
-                if(chan6>=1499 && chan6<=1501)  { chan6 = 1500;  chans[6] = chan6; }
-                if(chan6>1501) // 如果在上，就下行
-                {   if (dt_ms>100)  { chan6 = chan6 - 1; chans[6] = chan6; dt_ms = 0; }
-                    else  { chan6 = chan6;  chans[6] = chan6; } }
+                if( chan6 < 1514 ) // 如果在下，就上行
+                {   if ( dt_ms > mspus )  { chan6 = chan6 + 1; dt_ms = 0; }
+                    else  { chan6 = chan6; } }
+                if( chan6 >= 1514 && chan6 <= 1516 )  { chan6 = 1515; }
+                if( chan6 > 1516 ) // 如果在上，就下行
+                {   if ( dt_ms > mspus )  { chan6 = chan6 - 1; dt_ms = 0; }
+                    else  { chan6 = chan6; } }
             } 
-            if( chans[5]>1550 && chans[5]<1800 ) // 旋钮位于上部，则保持不动
-            {   chan6 = chan6;  chans[6] = chan6; }
-            if( chans[5]>=1800 ) // 旋钮位于上端，则向上移动
-            {   if (dt_ms>100)  { chan6 = chan6 + 1; chans[6] = chan6; dt_ms = 0; }
-                else  { chan6 = chan6;  chans[6] = chan6; } }
-            if( chan6 >= 2000 ) { chan6 = 2000;  chans[6] = chan6; }
-            if( chan6 <= 1000 ) { chan6 = 1000;  chans[6] = chan6; }    
+            if( chans[5] > 1550 && chans[5] < 1800 ) // 旋钮位于上部，则保持不动
+            {   chan6 = chan6; }
+            if( chans[5] >= 1800 ) // 旋钮位于上端，则向上移动
+            {   if ( dt_ms > mspus )  { chan6 = chan6 + 1; dt_ms = 0; }
+                else  { chan6 = chan6; } }
+            if( chan6 >= 1965 ) { chan6 = 1965; }
+            if( chan6 <= 1065 ) { chan6 = 1065; }
+
+            chans[6] = chan6; // 为第七通道赋值
         }
         else
         { chans[i] = channel(i)->get_radio_in(); }
@@ -83,16 +85,10 @@ uint8_t RC_Channels::get_radio_in(uint16_t *chans, const uint8_t num_channels)
 // update all the input channels
 bool RC_Channels::read_input(void)
 {
-    if (!hal.rcin->new_input() && !has_new_overrides) {
-        return false;
-    }
-
+    if (!hal.rcin->new_input() && !has_new_overrides) { return false; }
     has_new_overrides = false;
-
     bool success = false;
-    for (uint8_t i=0; i<NUM_RC_CHANNELS; i++) {
-        success |= channel(i)->update();
-    }
+    for (uint8_t i=0; i<NUM_RC_CHANNELS; i++) { success |= channel(i)->update(); }
 
     return success;
 }
