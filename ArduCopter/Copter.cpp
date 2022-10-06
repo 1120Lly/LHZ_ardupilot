@@ -426,6 +426,8 @@ void Copter::three_hz_loop()
     fence_check();
 #endif // AC_FENCE_ENABLED
 
+    // 向地面站发送全局变量：期望前向力
+    // gcs().send_text(MAV_SEVERITY_CRITICAL,"DESIRED FORWARD FORCE %f", des_forward);
 
     // update ch6 in flight tuning
     tuning();

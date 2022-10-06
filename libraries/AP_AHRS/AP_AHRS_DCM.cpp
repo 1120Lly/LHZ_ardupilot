@@ -993,7 +993,7 @@ void AP_AHRS_DCM::euler_angles(void)
     rc().get_radio_in (rcin, 8);
     float board_rotate = rcin[6];
     // float board_rotate = RC_Channels::get_radio_in(CH_6);
-    board_rotate= (board_rotate -1500) *0.2f; // 这里决定着倾斜角最大能转多少度
+    board_rotate= (board_rotate -1515) *0.2f; // 这里决定着倾斜角最大能转多少度
     board_rotation.from_euler(radians(0), radians(-board_rotate), radians(0));
     _body_dcm_matrix = _dcm_matrix * get_rotation_vehicle_body_to_autopilot_body();
     _body_dcm_matrix = _body_dcm_matrix * board_rotation;

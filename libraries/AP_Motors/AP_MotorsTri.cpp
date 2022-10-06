@@ -100,7 +100,10 @@ void AP_MotorsTri::output_armed_stabilizing()
     float   rotate_angle;        // 旋转角输入值，最左为0，最右为1
     float   beta;                // 期望俯仰变姿角，水平为0，朝下为1，朝上为-1
     float   sinbeta, cosbeta;    // 期望俯仰变姿角正弦余弦
+    float   CH5_switch;
+
     uint16_t rcin[8] = {};
+    // des_forward = des_forward + 0.001f; // 期望前向力，全局可用
 
     // apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
@@ -109,18 +112,22 @@ void AP_MotorsTri::output_armed_stabilizing()
     yaw_thrust = (_yaw_in + _yaw_in_ff) * compensation_gain; 
     throttle_thrust = get_throttle() * compensation_gain;
    
-    // 俯仰角与前进量的标准化
-    // rotate_angle = RC_Channels::get_radio_in(CH_6,8);   // 获取遥控器第6通道信号
-    // forward = RC_Channels::get_radio_in(CH_2);        // 获取遥控器第2通道信号
-    
-    rc().get_radio_in (rcin, 8);
-    rotate_angle = rcin[6];
-    forward = rcin[1];
-    rotate_angle= (rotate_angle -1500) *0.002f;       // 转换为标准值，水平为0，朝上为-1，朝下为1
-    forward= (forward -1500) *0.002f;                 // 转换为标准值，水平为0，向后为-1，向前为1
+    // 变姿角与前向力的标准化
+    rc().get_radio_in (rcin, 8);                      // 获取遥控器所有通道的信号值
+    rotate_angle = rcin[6];                           // 将遥控器第7通道信号赋值给变姿角
+    forward = rcin[1];                                // 将遥控器第2通道信号赋值给前向力
+    CH5_switch = rcin[4];
+
+    rotate_angle= (rotate_angle -1515) *0.002f;       // 转换为标准值，水平为0，朝上为-1，朝下为1
+    // forward= (forward -1515) *0.002f;                 // 转换为标准值，水平为0，向后为-1，向前为1
     beta = -rotate_angle *1.57f;                      // 期望俯仰变姿角，水平为0，朝上为1.57，朝下为-1.57
-    sinbeta = sinf(beta);                              // 期望俯仰变姿角正弦，水平为0，朝上为1，朝下为-1
-    cosbeta = cosf(beta);                              // 期望俯仰变姿角余弦，水平为1，朝上为0，朝下为0
+    sinbeta = sinf(beta);                             // 期望俯仰变姿角正弦，水平为0，朝上为1，朝下为-1
+    cosbeta = cosf(beta);                             // 期望俯仰变姿角余弦，水平为1，朝上为0，朝下为0
+
+    if ( CH5_switch >= 1200 ) 
+    { forward = (forward -1515) *0.002f; }
+    else if (CH5_switch < 1200 ) 
+    { forward = des_forward *0.0003f; }
 
     // sanity check throttle is above zero and below current limited throttle
     if (throttle_thrust <= 0.0f) 
@@ -128,18 +135,33 @@ void AP_MotorsTri::output_armed_stabilizing()
     if (throttle_thrust >= _throttle_thrust_max) 
     { throttle_thrust = _throttle_thrust_max; limit.throttle_upper = true; }
 
-    // 新电机控制分配 calculate left and right throttle outputs
+    // 小飞机电机控制分配 
     _thrust_left  =  throttle_thrust + cosbeta *pitch_thrust *0.2f - roll_thrust *0.45f;
     _thrust_right =  throttle_thrust + cosbeta *pitch_thrust *0.2f + roll_thrust *0.45f;
     _thrust_tail  =  throttle_thrust - cosbeta *pitch_thrust *0.6f ;
+    
+    // 大飞机电机控制分配，勿动
+    // _thrust_left  =  throttle_thrust + cosbeta *pitch_thrust *0.2f - roll_thrust *0.45f;
+    // _thrust_right =  throttle_thrust + cosbeta *pitch_thrust *0.2f + roll_thrust *0.45f;
+    // _thrust_tail  =  throttle_thrust - cosbeta *pitch_thrust *0.6f ;
 
     // 由于转动惯量减小，新航向控制在大角度时适度减弱
-    yaw_thrust = (0.6f + cosbeta *0.4f) *yaw_thrust;
+    // yaw_thrust = (0.6f + cosbeta *0.4f) *yaw_thrust;
 
-    // 新舵机控制分配
+    // 小飞机舵机控制分配
     _tilt_left    = -rotate_angle *0.7f + forward *0.2f - sinbeta *pitch_thrust *0.25f - yaw_thrust *0.3f;
     _tilt_right   =  rotate_angle *0.7f - forward *0.2f + sinbeta *pitch_thrust *0.25f - yaw_thrust *0.3f;
     _tilt_tail    =  rotate_angle *0.7f - forward *0.1f - sinbeta *pitch_thrust *0.4f;
+
+    // 小飞机舵机控制分配
+    // _tilt_left    = -rotate_angle *0.7f + forward *0.2f - sinbeta *pitch_thrust *0.25f - yaw_thrust *0.3f;
+    // _tilt_right   =  rotate_angle *0.7f - forward *0.2f + sinbeta *pitch_thrust *0.25f - yaw_thrust *0.3f;
+    // _tilt_tail    =  rotate_angle *0.7f - forward *0.1f - sinbeta *pitch_thrust *0.4f;
+
+    // 大飞机舵机控制分配，勿动
+    // _tilt_left    = -rotate_angle *0.7f + forward *0.2f - sinbeta *pitch_thrust *0.25f - yaw_thrust *0.3f;
+    // _tilt_right   =  rotate_angle *0.7f - forward *0.2f + sinbeta *pitch_thrust *0.25f - yaw_thrust *0.3f;
+    // _tilt_tail    =  rotate_angle *0.7f - forward *0.1f - sinbeta *pitch_thrust *0.4f;
 
    // 如果最大推力大于1，则降低平均油门
     thrust_max = MAX(_thrust_right,_thrust_left);

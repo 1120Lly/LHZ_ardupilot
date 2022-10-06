@@ -737,6 +737,8 @@ void ModeAuto::takeoff_run()
     auto_takeoff_run();
 }
 
+extern float des_forward; // 声明全局变量：期望前向力
+
 // auto_wp_run - runs the auto waypoint controller
 //      called by auto_run at 100hz or more
 void ModeAuto::wp_run()
@@ -760,21 +762,20 @@ void ModeAuto::wp_run()
 
     // set motors to full range
     motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
-
     // run waypoint controller
     copter.failsafe_terrain_set_status(wp_nav->update_wpnav());
-
     // call z-axis position controller (wpnav should have already updated it's alt target)
     pos_control->update_z_controller();
 
     // call attitude controller
-    if (auto_yaw.mode() == AUTO_YAW_HOLD) {
-        // roll & pitch from waypoint controller, yaw rate from pilot
-        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), target_yaw_rate);
-    } else {
-        // roll, pitch from waypoint controller, yaw heading from auto_heading()
-        attitude_control->input_euler_angle_roll_pitch_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), auto_yaw.yaw(), true);
-    }
+    if (auto_yaw.mode() == AUTO_YAW_HOLD) {    // roll & pitch from waypoint controller, yaw rate from pilot
+        // attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), target_yaw_rate);
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(wp_nav->get_roll(), 0.0f, target_yaw_rate);
+    } else {    // roll, pitch from waypoint controller, yaw heading from auto_heading()
+        // attitude_control->input_euler_angle_roll_pitch_yaw(wp_nav->get_roll(), wp_nav->get_pitch(), auto_yaw.yaw(), true);
+        attitude_control->input_euler_angle_roll_pitch_yaw(wp_nav->get_roll(), 0.0f, auto_yaw.yaw(), true);    }
+
+    des_forward = wp_nav->get_pitch(); // 将发送给姿态控制器的期望俯仰角设为0，并对期望前向力的赋值
 }
 
 // auto_spline_run - runs the auto spline controller
