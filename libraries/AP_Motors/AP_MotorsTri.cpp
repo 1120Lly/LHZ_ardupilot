@@ -127,7 +127,7 @@ void AP_MotorsTri::output_armed_stabilizing()
     if ( CH5_switch >= 1200 ) 
     { forward = (forward -1515) *0.002f; }
     else if (CH5_switch < 1200 ) 
-    { forward = des_forward *0.0003f; }
+    { forward = des_forward *0.0004f; }
 
     // sanity check throttle is above zero and below current limited throttle
     if (throttle_thrust <= 0.0f) 
@@ -135,30 +135,30 @@ void AP_MotorsTri::output_armed_stabilizing()
     if (throttle_thrust >= _throttle_thrust_max) 
     { throttle_thrust = _throttle_thrust_max; limit.throttle_upper = true; }
 
-    // 小飞机电机控制分配 
-    _thrust_left  =  throttle_thrust + cosbeta *pitch_thrust *0.2f - roll_thrust *0.45f;
-    _thrust_right =  throttle_thrust + cosbeta *pitch_thrust *0.2f + roll_thrust *0.45f;
-    _thrust_tail  =  throttle_thrust - cosbeta *pitch_thrust *0.6f ;
+    // 大飞机电机控制分配 
+    _thrust_left  =  throttle_thrust *1.0f + cosbeta *pitch_thrust *0.2f - roll_thrust *0.45f;
+    _thrust_right =  throttle_thrust *1.0f + cosbeta *pitch_thrust *0.2f + roll_thrust *0.45f;
+    _thrust_tail  =  throttle_thrust *0.8f - cosbeta *pitch_thrust *0.6f ;
     
-    // 大飞机电机控制分配，勿动
+    // 大飞机电机原控制分配
     // _thrust_left  =  throttle_thrust + cosbeta *pitch_thrust *0.2f - roll_thrust *0.45f;
     // _thrust_right =  throttle_thrust + cosbeta *pitch_thrust *0.2f + roll_thrust *0.45f;
     // _thrust_tail  =  throttle_thrust - cosbeta *pitch_thrust *0.6f ;
 
     // 由于转动惯量减小，新航向控制在大角度时适度减弱
-    // yaw_thrust = (0.6f + cosbeta *0.4f) *yaw_thrust;
+    yaw_thrust = (0.6f + cosbeta *0.4f) *yaw_thrust;
 
-    // 小飞机舵机控制分配
-    _tilt_left    = -rotate_angle *0.7f + forward *0.2f - sinbeta *pitch_thrust *0.25f - yaw_thrust *0.3f;
-    _tilt_right   =  rotate_angle *0.7f - forward *0.2f + sinbeta *pitch_thrust *0.25f - yaw_thrust *0.3f;
-    _tilt_tail    =  rotate_angle *0.7f - forward *0.1f - sinbeta *pitch_thrust *0.4f;
+    // 大飞机舵机控制分配
+    _tilt_left    = -rotate_angle *0.7f + forward *0.20f - sinbeta *pitch_thrust *0.25f - yaw_thrust *0.3f;
+    _tilt_right   = -rotate_angle *0.7f + forward *0.20f - sinbeta *pitch_thrust *0.25f + yaw_thrust *0.3f;
+    _tilt_tail    =  rotate_angle *0.7f - forward *0.15f - sinbeta *pitch_thrust *0.4f;
+    
+    // 测试并校准极限角度用
+    // _tilt_left    = -rotate_angle *0.7f + forward *0.20f - sinbeta *pitch_thrust *0.0f;
+    // _tilt_right   = -rotate_angle *0.7f + forward *0.20f ;
+    // _tilt_tail    =  rotate_angle *0.7f - forward *0.15f ;
 
-    // 小飞机舵机控制分配
-    // _tilt_left    = -rotate_angle *0.7f + forward *0.2f - sinbeta *pitch_thrust *0.25f - yaw_thrust *0.3f;
-    // _tilt_right   =  rotate_angle *0.7f - forward *0.2f + sinbeta *pitch_thrust *0.25f - yaw_thrust *0.3f;
-    // _tilt_tail    =  rotate_angle *0.7f - forward *0.1f - sinbeta *pitch_thrust *0.4f;
-
-    // 大飞机舵机控制分配，勿动
+    // 大飞机舵机原控制分配
     // _tilt_left    = -rotate_angle *0.7f + forward *0.2f - sinbeta *pitch_thrust *0.25f - yaw_thrust *0.3f;
     // _tilt_right   =  rotate_angle *0.7f - forward *0.2f + sinbeta *pitch_thrust *0.25f - yaw_thrust *0.3f;
     // _tilt_tail    =  rotate_angle *0.7f - forward *0.1f - sinbeta *pitch_thrust *0.4f;

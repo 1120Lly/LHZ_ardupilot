@@ -73,7 +73,35 @@ uint8_t RC_Channels::get_radio_in(uint16_t *chans, const uint8_t num_channels)
             if( chan6 >= 1965 ) { chan6 = 1965; } // 第7通道最大限幅为1965
             if( chan6 <= 1065 ) { chan6 = 1065; } // 第7通道最小限幅为1065
 
-            chans[6] = chan6; // 为第七通道赋值
+
+            // 0度，45度，90度
+            // if( chans[5] <= 1265 ) // 旋钮位于下端，则向下移动
+            // {   if ( dt_ms > unit_time ) { chan6 = chan6 - 1; dt_ms = 0; }
+            //     else  { chan6 = chan6; } }
+            // if( chans[5] > 1265 && chans[5] < 1465 ) // 旋钮位于下部，则保持不动
+            // {   chan6 = chan6; }
+            // if( chans[5] >= 1465 && chans[5] <= 1565 ) // 旋钮位于中间，则向中间移动
+            // { 
+            //     if( chan6 < 1739 ) // 如果在下，就上行
+            //     {   if ( dt_ms > unit_time )  { chan6 = chan6 + 1; dt_ms = 0; }
+            //         else  { chan6 = chan6; } }
+            //     if( chan6 >= 1739 && chan6 <= 1741 )  { chan6 = 1740; }
+            //     if( chan6 > 1741 ) // 如果在上，就下行
+            //     {   if ( dt_ms > unit_time )  { chan6 = chan6 - 1; dt_ms = 0; }
+            //         else  { chan6 = chan6; } }
+            // } 
+            // if( chans[5] > 1565 && chans[5] < 1765 ) // 旋钮位于上部，则保持不动
+            // {   chan6 = chan6; }
+            // if( chans[5] >= 1765 ) // 旋钮位于上端，则向上移动
+            // {   if ( dt_ms > unit_time )  { chan6 = chan6 + 1; dt_ms = 0; }
+            //     else  { chan6 = chan6; } }
+
+            // if( chan6 >= 1965 ) { chan6 = 1965; } // 第7通道最大限幅为1965
+            // if( chan6 <= 1515 ) { chan6 = 1515; } // 第7通道最小限幅为1515
+
+
+            // chans[6] = chan6;    // 自动变姿，为第七通道赋值
+            chans[6] = chans[5]; // 手动变姿，将第六通道赋值给第七通道
         }
         else
         { chans[i] = channel(i)->get_radio_in(); }
