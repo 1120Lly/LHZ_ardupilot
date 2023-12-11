@@ -43,6 +43,7 @@ protected:
     float _throttle; // 0..1
     float _tilt_left;  // -1..1
     float _tilt_right;  // -1..1
+    float _tilt_pend;  // -1..1
     float _thrust_left;  // 0..1
     float _thrust_right;  // 0..1
 };
