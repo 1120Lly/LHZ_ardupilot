@@ -1,22 +1,4 @@
-/*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
- *       AP_MotorsTailsitter.cpp - ArduCopter motors library for tailsitters and bicopters
- *
- */
+//  AP_MotorsTailsitter.cpp - ArduCopter motors library for tailsitters and bicopters
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
@@ -35,15 +17,11 @@ void AP_MotorsTailsitter::init(motor_frame_class frame_class, motor_frame_type f
 
     // right throttle defaults to servo output 1
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleRight, CH_1);
-    if (SRV_Channels::find_channel(SRV_Channel::k_throttleRight, chan)) {
-        motor_enabled[chan] = true;
-    }
+    if (SRV_Channels::find_channel(SRV_Channel::k_throttleRight, chan)) { motor_enabled[chan] = true; }
 
     // left throttle defaults to servo output 2
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_throttleLeft, CH_2);
-    if (SRV_Channels::find_channel(SRV_Channel::k_throttleLeft, chan)) {
-        motor_enabled[chan] = true;
-    }
+    if (SRV_Channels::find_channel(SRV_Channel::k_throttleLeft, chan))  { motor_enabled[chan] = true; }
 
     // right servo defaults to servo output 3
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_tiltMotorRight, CH_3);
@@ -53,20 +31,18 @@ void AP_MotorsTailsitter::init(motor_frame_class frame_class, motor_frame_type f
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_tiltMotorLeft, CH_4);
     SRV_Channels::set_angle(SRV_Channel::k_tiltMotorLeft, SERVO_OUTPUT_RANGE);
 
+    SRV_Channels::set_aux_channel_default(SRV_Channel::k_tiltPendulum, CH_5);
+    SRV_Channels::set_angle(SRV_Channel::k_tiltPendulum, SERVO_OUTPUT_RANGE);
+
     _mav_type = MAV_TYPE_COAXIAL;
 
     // record successful initialisation if what we setup was the desired frame_class
     set_initialised_ok(frame_class == MOTOR_FRAME_TAILSITTER);
 }
 
-
 /// Constructor
 AP_MotorsTailsitter::AP_MotorsTailsitter(uint16_t loop_rate, uint16_t speed_hz) :
-    AP_MotorsMulticopter(loop_rate, speed_hz)
-{
-    set_update_rate(speed_hz);
-}
-
+AP_MotorsMulticopter(loop_rate, speed_hz) { set_update_rate(speed_hz); }
 
 // set update rate to motors - a value in hertz
 void AP_MotorsTailsitter::set_update_rate(uint16_t speed_hz)
@@ -80,9 +56,7 @@ void AP_MotorsTailsitter::set_update_rate(uint16_t speed_hz)
 
 void AP_MotorsTailsitter::output_to_motors()
 {
-    if (!initialised_ok()) {
-        return;
-    }
+    if (!initialised_ok()) { return; }
 
     switch (_spool_state) {
         case SpoolState::SHUT_DOWN:
@@ -112,6 +86,7 @@ void AP_MotorsTailsitter::output_to_motors()
 
     SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorLeft, _tilt_left*SERVO_OUTPUT_RANGE);
     SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorRight, _tilt_right*SERVO_OUTPUT_RANGE);
+    SRV_Channels::set_output_scaled(SRV_Channel::k_tiltPendulum, _tilt_pend*SERVO_OUTPUT_RANGE);
 
 }
 
@@ -121,12 +96,8 @@ uint16_t AP_MotorsTailsitter::get_motor_mask()
 {
     uint32_t motor_mask = 0;
     uint8_t chan;
-    if (SRV_Channels::find_channel(SRV_Channel::k_throttleLeft, chan)) {
-        motor_mask |= 1U << chan;
-    }
-    if (SRV_Channels::find_channel(SRV_Channel::k_throttleRight, chan)) {
-        motor_mask |= 1U << chan;
-    }
+    if (SRV_Channels::find_channel(SRV_Channel::k_throttleLeft, chan))  { motor_mask |= 1U << chan; }
+    if (SRV_Channels::find_channel(SRV_Channel::k_throttleRight, chan)) { motor_mask |= 1U << chan; }
 
     // add parent's mask
     motor_mask |= AP_MotorsMulticopter::get_motor_mask();
@@ -143,6 +114,7 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     float   throttle_thrust;            // throttle thrust input value, 0.0 - 1.0
     float   thrust_max;                 // highest motor value
     float   thr_adj = 0.0f;             // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
+    float   mode_switch = RC_Channels::get_radio_in(CH_8);
 
     // apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
@@ -184,6 +156,9 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     // thrust vectoring
     _tilt_left  = pitch_thrust - yaw_thrust;
     _tilt_right = pitch_thrust + yaw_thrust;
+
+    if (mode_switch > 1500.0f)     { _tilt_pend = 0.0f; }
+    else if (mode_switch > 500.0f) { _tilt_pend = pitch_thrust; }
 }
 
 // output_test_seq - spin a motor at the pwm value specified
@@ -198,24 +173,11 @@ void AP_MotorsTailsitter::output_test_seq(uint8_t motor_seq, int16_t pwm)
 
     // output to motors and servos
     switch (motor_seq) {
-        case 1:
-            // right throttle
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, pwm);
-            break;
-        case 2:
-            // right tilt servo
-            SRV_Channels::set_output_pwm(SRV_Channel::k_tiltMotorRight, pwm);
-            break;
-        case 3:
-            // left throttle
-            SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, pwm);
-            break;
-        case 4:
-            // left tilt servo
-            SRV_Channels::set_output_pwm(SRV_Channel::k_tiltMotorLeft, pwm);
-            break;
-        default:
-            // do nothing
-            break;
+        case 1: SRV_Channels::set_output_pwm(SRV_Channel::k_throttleRight, pwm); break;
+        case 2: SRV_Channels::set_output_pwm(SRV_Channel::k_throttleLeft, pwm); break;
+        case 3: SRV_Channels::set_output_pwm(SRV_Channel::k_tiltMotorRight, pwm); break;
+        case 4: SRV_Channels::set_output_pwm(SRV_Channel::k_tiltMotorLeft, pwm); break;
+        case 5: SRV_Channels::set_output_pwm(SRV_Channel::k_tiltPendulum, pwm); break;
+        default:  break;
     }
 }
