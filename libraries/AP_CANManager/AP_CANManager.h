@@ -61,6 +61,7 @@ public:
         Driver_Type_USD1 = 7,
         Driver_Type_KDECAN = 8,
         Driver_Type_MPPT_PacketDigital = 9,
+        Driver_Type_FOCCAN = 10,
     };
 
     void init(void);
@@ -143,6 +144,7 @@ private:
         AP_CANDriver* _uavcan;
         AP_CANDriver* _kdecan;
         AP_CANDriver* _piccolocan;
+        AP_CANDriver* _foccan;
     };
 
     CANIface_Params _interfaces[HAL_NUM_CAN_IFACES];

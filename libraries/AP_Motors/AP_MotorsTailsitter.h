@@ -6,6 +6,7 @@
 #include <AP_Math/AP_Math.h>
 #include <SRV_Channel/SRV_Channel.h>
 #include "AP_MotorsMulticopter.h"
+#include <AP_FOCCAN/AP_FOCCAN.h>
 
 /// @class      AP_MotorsTailsitter
 class AP_MotorsTailsitter : public AP_MotorsMulticopter {
@@ -38,6 +39,7 @@ public:
 protected:
     // calculate motor outputs
     void output_armed_stabilizing() override;
+    AP_FOCCAN* FOCCAN;
 
     // calculated outputs
     float _throttle;     // 0..1

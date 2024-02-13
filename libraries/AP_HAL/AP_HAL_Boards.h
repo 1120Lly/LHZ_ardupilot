@@ -158,7 +158,7 @@
 #endif
 
 #ifndef HAL_NUM_CAN_IFACES
-#define HAL_NUM_CAN_IFACES 0
+#define HAL_NUM_CAN_IFACES 2 // 原本是0
 #endif
 
 #ifndef HAL_RCINPUT_WITH_AP_RADIO
@@ -216,8 +216,8 @@
 #define HAL_CAN_DRIVER_DEFAULT 0
 #endif
 
-#ifndef HAL_MAX_CAN_PROTOCOL_DRIVERS
-#if defined(HAL_BOOTLOADER_BUILD)
+#ifndef HAL_MAX_CAN_PROTOCOL_DRIVERS // 如果这个宏未定义，则执行下面的代码块
+#if defined(HAL_BOOTLOADER_BUILD)    // 如果这个宏定义了，则执行下面的代码块
     #define HAL_MAX_CAN_PROTOCOL_DRIVERS 0
 #else
     #define HAL_MAX_CAN_PROTOCOL_DRIVERS HAL_NUM_CAN_IFACES

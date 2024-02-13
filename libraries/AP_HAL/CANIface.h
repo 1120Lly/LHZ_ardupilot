@@ -45,6 +45,7 @@ struct AP_HAL::CANFrame {
         memset(data,0, MaxDataLen);
     }
 
+    // Not Flexible Data-rate CAN
     CANFrame(uint32_t can_id, const uint8_t* can_data, uint8_t data_len) :
         id(can_id),
         dlc((data_len > MaxDataLen) ? MaxDataLen : data_len)

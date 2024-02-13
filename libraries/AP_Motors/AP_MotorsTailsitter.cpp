@@ -38,6 +38,7 @@ void AP_MotorsTailsitter::init(motor_frame_class frame_class, motor_frame_type f
 
     // record successful initialisation if what we setup was the desired frame_class
     set_initialised_ok(frame_class == MOTOR_FRAME_TAILSITTER);
+    FOCCAN = AP_FOCCAN::get_singleton();
 }
 
 /// Constructor
@@ -117,13 +118,14 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     float   mode_switch = RC_Channels::get_radio_in(CH_8);
     
     _pitch_rcin = RC_Channels::get_radio_in(CH_2);
-    _pitch_rcin = 0.0005f * (_pitch_rcin - 1500);
+    // _pitch_rcin = 0.0005f * (_pitch_rcin - 1500);
+    _pitch_rcin = 0.5f * (_pitch_rcin - 1500);
     _pend_rcin = _pitch_rcin;    
 
     // apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
     roll_thrust = (_roll_in + _roll_in_ff) * compensation_gain;
-    pitch_thrust = _pitch_in + _pitch_in_ff; // Ô­Ê¼³ÌĞò
+    pitch_thrust = _pitch_in + _pitch_in_ff; // åŸå§‹ç¨‹åº
     yaw_thrust = _yaw_in + _yaw_in_ff;
     throttle_thrust = get_throttle() * compensation_gain;
 
@@ -158,34 +160,44 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     _throttle_out = _throttle / compensation_gain;
 
     // thrust vectoring
-    _pitch_rcin = 0.02f * _pitch_rcin + 0.98f * _pitch_rcin_last; // µÍÍ¨ÂË²¨
-    _tilt_left  = pitch_thrust + _pitch_rcin - yaw_thrust; // ÀÛ¼ÓÒ£¿ØÆ÷¸©ÑöÊäÈë
-    _tilt_right = pitch_thrust + _pitch_rcin + yaw_thrust; // ÀÛ¼ÓÒ£¿ØÆ÷¸©ÑöÊäÈë
+    _pitch_rcin = 0.02f * _pitch_rcin + 0.98f * _pitch_rcin_last; // ä½é€šæ»¤æ³¢
+    _tilt_left  = pitch_thrust + _pitch_rcin - yaw_thrust; // ç´¯åŠ é¥æ§å™¨ä¿¯ä»°è¾“å…¥
+    _tilt_right = pitch_thrust + _pitch_rcin + yaw_thrust; // ç´¯åŠ é¥æ§å™¨ä¿¯ä»°è¾“å…¥
 
     if (mode_switch > 1500.0f)     { _tilt_pend = 0.0f; }
     else if (mode_switch > 500.0f) { 
-        // _pend_omega = 0.0f; // _pend_omega Ó¦ÔÚ³õÊ¼»¯Ê±ÉùÃ÷
-        // _pend_omega = _pend_omega + 0.05f * pitch_thrust; // ½«ÆÚÍûÁ¦¾Ø»ı·ÖÎªÆÚÍû½ÇËÙ¶È
-        // _tilt_pend  = _tilt_pend + 0.01f * _pend_omega;  // ½«ÆÚÍû½ÇËÙ¶È»ı·ÖÎªÆÚÍû½Ç¶È
-        // _tilt_pend = _tilt_pend - 0.001f * _tilt_pend - 0.002f; // ÓÃÓÚÔÈËÙ»ØÕı»úÖÆ
-        // _tilt_pend  = _tilt_pend + 0.02f * pitch_thrust; // ½«ÆÚÍûÁ¦¾Ø»ı·ÖÎªÆÚÍû½ÇËÙ¶È
-        
-        pitch_thrust = 0.05f * pitch_thrust + 0.95f * _pitch_thrust_last; // µÍÍ¨ÂË²¨
-        _pend_rcin = 0.2f * _pend_rcin + 0.8f * _pend_rcin_last; // µÍÍ¨ÂË²¨
-        _tilt_pend = _tilt_pend + 1.8f * (pitch_thrust - _pitch_thrust_last);
-        _tilt_pend = _tilt_pend + 2.6f * (_pend_rcin_last - _pend_rcin); // ÀÛ¼ÓÒ£¿ØÆ÷¸©Ñö²Ù×İµÄ±ä»¯Á¿
+        // _pend_omega = 0.0f; // _pend_omega åº”åœ¨åˆå§‹åŒ–æ—¶å£°æ˜
+        // _pend_omega = _pend_omega + 0.05f * pitch_thrust; // å°†æœŸæœ›åŠ›çŸ©ç§¯åˆ†ä¸ºæœŸæœ›è§’é€Ÿåº¦
+        // _tilt_pend  = _tilt_pend + 0.01f * _pend_omega;  // å°†æœŸæœ›è§’é€Ÿåº¦ç§¯åˆ†ä¸ºæœŸæœ›è§’åº¦
+        // _tilt_pend = _tilt_pend - 0.001f * _tilt_pend - 0.002f; // ç”¨äºåŒ€é€Ÿå›æ­£æœºåˆ¶
+        // _tilt_pend  = _tilt_pend + 0.02f * pitch_thrust; // å°†æœŸæœ›åŠ›çŸ©ç§¯åˆ†ä¸ºæœŸæœ›è§’é€Ÿåº¦
 
-        if (_tilt_pend < -0.9f) { _tilt_pend = -0.9f; } // Í£Ö¹»ı·Ö
+        
+        pitch_thrust = 0.05f * pitch_thrust + 0.95f * _pitch_thrust_last; // ä½é€šæ»¤æ³¢
+        _pend_rcin = 0.2f * _pend_rcin + 0.8f * _pend_rcin_last; // ä½é€šæ»¤æ³¢
+        _tilt_pend = _tilt_pend + 1.8f * (pitch_thrust - _pitch_thrust_last);
+        _tilt_pend = _tilt_pend + 2.6f * (_pend_rcin_last - _pend_rcin); // ç´¯åŠ é¥æ§å™¨ä¿¯ä»°æ“çºµçš„å˜åŒ–é‡
+
+        if (_tilt_pend < -0.9f) { _tilt_pend = -0.9f; } // åœæ­¢ç§¯åˆ†
         if (_tilt_pend >  0.9f) { _tilt_pend =  0.9f; }
-        if (_tilt_pend >  0.0f) { _tilt_pend = _tilt_pend - 0.0005f; } // ÔÈËÙ»ØÕı»úÖÆ
+        if (_tilt_pend >  0.0f) { _tilt_pend = _tilt_pend - 0.0005f; } // åŒ€é€Ÿå›æ­£æœºåˆ¶
         if (_tilt_pend <  0.0f) { _tilt_pend = _tilt_pend + 0.0005f; }
     }
     
-    // _tilt_pend = 0.4f * _tilt_pend + 0.6f * _tilt_pend_last; // µÍÍ¨ÂË²¨
+    // _tilt_pend = 0.4f * _tilt_pend + 0.6f * _tilt_pend_last; // ä½é€šæ»¤æ³¢
     _tilt_pend_last = _tilt_pend;
     _pitch_rcin_last = _pitch_rcin;
     _pend_rcin_last = _pend_rcin;
     _pitch_thrust_last = pitch_thrust;
+
+    // // è½¬é€Ÿç¼©å°1000å€
+    // wheel_left_f  = (float)balanceCAN->getSpeed(0) / 1000;
+    // wheel_right_f = -(float)balanceCAN->getSpeed(1) / 1000;
+
+    // // æœ€ç»ˆçš„ç”µæœºè¾“å…¥é‡
+    // balanceCAN->setCurrent(0, (int16_t)motor_target_left_int);
+    // balanceCAN->setCurrent(1, (int16_t)motor_target_right_int);
+    FOCCAN->setCurrent(0, (int16_t)_pitch_rcin);
 }
 
 // output_test_seq - spin a motor at the pwm value specified
