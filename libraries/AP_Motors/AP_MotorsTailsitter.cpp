@@ -115,11 +115,15 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     float   thrust_max;                 // highest motor value
     float   thr_adj = 0.0f;             // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
     float   mode_switch = RC_Channels::get_radio_in(CH_8);
+    
+    _pitch_rcin = RC_Channels::get_radio_in(CH_2);
+    _pitch_rcin = 0.0005f * (_pitch_rcin - 1500);
+    _pend_rcin = _pitch_rcin;    
 
     // apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
     roll_thrust = (_roll_in + _roll_in_ff) * compensation_gain;
-    pitch_thrust = _pitch_in + _pitch_in_ff;
+    pitch_thrust = _pitch_in + _pitch_in_ff; // 原始程序
     yaw_thrust = _yaw_in + _yaw_in_ff;
     throttle_thrust = get_throttle() * compensation_gain;
 
@@ -154,11 +158,34 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     _throttle_out = _throttle / compensation_gain;
 
     // thrust vectoring
-    _tilt_left  = pitch_thrust - yaw_thrust;
-    _tilt_right = pitch_thrust + yaw_thrust;
+    _pitch_rcin = 0.02f * _pitch_rcin + 0.98f * _pitch_rcin_last; // 低通滤波
+    _tilt_left  = pitch_thrust + _pitch_rcin - yaw_thrust; // 累加遥控器俯仰输入
+    _tilt_right = pitch_thrust + _pitch_rcin + yaw_thrust; // 累加遥控器俯仰输入
 
     if (mode_switch > 1500.0f)     { _tilt_pend = 0.0f; }
-    else if (mode_switch > 500.0f) { _tilt_pend = pitch_thrust; }
+    else if (mode_switch > 500.0f) { 
+        // _pend_omega = 0.0f; // _pend_omega 应在初始化时声明
+        // _pend_omega = _pend_omega + 0.05f * pitch_thrust; // 将期望力矩积分为期望角速度
+        // _tilt_pend  = _tilt_pend + 0.01f * _pend_omega;  // 将期望角速度积分为期望角度
+        // _tilt_pend = _tilt_pend - 0.001f * _tilt_pend - 0.002f; // 用于匀速回正机制
+        // _tilt_pend  = _tilt_pend + 0.02f * pitch_thrust; // 将期望力矩积分为期望角速度
+        
+        pitch_thrust = 0.05f * pitch_thrust + 0.95f * _pitch_thrust_last; // 低通滤波
+        _pend_rcin = 0.2f * _pend_rcin + 0.8f * _pend_rcin_last; // 低通滤波
+        _tilt_pend = _tilt_pend + 1.8f * (pitch_thrust - _pitch_thrust_last);
+        _tilt_pend = _tilt_pend + 2.6f * (_pend_rcin_last - _pend_rcin); // 累加遥控器俯仰操纵的变化量
+
+        if (_tilt_pend < -0.9f) { _tilt_pend = -0.9f; } // 停止积分
+        if (_tilt_pend >  0.9f) { _tilt_pend =  0.9f; }
+        if (_tilt_pend >  0.0f) { _tilt_pend = _tilt_pend - 0.0005f; } // 匀速回正机制
+        if (_tilt_pend <  0.0f) { _tilt_pend = _tilt_pend + 0.0005f; }
+    }
+    
+    // _tilt_pend = 0.4f * _tilt_pend + 0.6f * _tilt_pend_last; // 低通滤波
+    _tilt_pend_last = _tilt_pend;
+    _pitch_rcin_last = _pitch_rcin;
+    _pend_rcin_last = _pend_rcin;
+    _pitch_thrust_last = pitch_thrust;
 }
 
 // output_test_seq - spin a motor at the pwm value specified

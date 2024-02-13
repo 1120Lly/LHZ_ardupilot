@@ -40,10 +40,17 @@ protected:
     void output_armed_stabilizing() override;
 
     // calculated outputs
-    float _throttle; // 0..1
-    float _tilt_left;  // -1..1
-    float _tilt_right;  // -1..1
-    float _tilt_pend;  // -1..1
+    float _throttle;     // 0..1
+    float _tilt_left;    // -1..1
+    float _tilt_right;   // -1..1
+    float _pend_omega;   // -1..1
+    float _tilt_pend;    // -1..1
+    float _tilt_pend_last; // -1..1
     float _thrust_left;  // 0..1
-    float _thrust_right;  // 0..1
+    float _thrust_right; // 0..1
+    float _pitch_rcin;
+    float _pitch_rcin_last;
+    float _pend_rcin;
+    float _pend_rcin_last;
+    float _pitch_thrust_last;
 };

@@ -387,7 +387,8 @@ void Mode::get_pilot_desired_lean_angles(float &roll_out, float &pitch_out, floa
     // scale roll and pitch inputs to ANGLE_MAX parameter range
     float scaler = angle_max/(float)ROLL_PITCH_YAW_INPUT_MAX;
     roll_out *= scaler;
-    pitch_out *= scaler;
+    // pitch_out *= scaler;
+    pitch_out = pitch_out * scaler * 0.001f;    //将期望俯仰角受俯仰通道的影响降低到几乎为零的状态
 
     // do circular limit
     float total_in = norm(pitch_out, roll_out);
