@@ -1,19 +1,4 @@
 /*
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-/*
  *       AP_MotorsTailsitter.cpp - ArduCopter motors library for tailsitters and bicopters
  *
  */
@@ -23,6 +8,7 @@
 #include "AP_MotorsTailsitter.h"
 #include <GCS_MAVLink/GCS.h>
 #include <SRV_Channel/SRV_Channel.h>
+// #include "Copter.h"
 
 extern const AP_HAL::HAL& hal;
 
@@ -52,6 +38,7 @@ void AP_MotorsTailsitter::init(motor_frame_class frame_class, motor_frame_type f
 
     // record successful initialisation if what we setup was the desired frame_class
     set_initialised_ok(frame_class == MOTOR_FRAME_TAILSITTER);
+    FOCCAN = AP_FOCCAN::get_singleton();
 }
 
 
@@ -142,6 +129,11 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     float   thrust_min;                 // lowest motor value
     float   thr_adj = 0.0f;             // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
 
+    // _pitch_rcin = RC_Channels::get_radio_in(CH_2);
+    _pitch_rcin = hal.rcin->read(CH_2);
+    // _pitch_rcin = 0.0005f * (_pitch_rcin - 1500);
+    _pitch_rcin = 2.0f * (_pitch_rcin - 1500);
+
     // apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
     roll_thrust = (_roll_in + _roll_in_ff) * compensation_gain;
@@ -212,6 +204,9 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     // thrust vectoring
     _tilt_left  = pitch_thrust - yaw_thrust;
     _tilt_right = pitch_thrust + yaw_thrust;
+
+    FOCCAN->setCurrent(0, (int16_t)_pitch_rcin);
+    FOCCAN->setCurrent(1, (int16_t)_pitch_rcin);
 }
 
 // output_test_seq - spin a motor at the pwm value specified

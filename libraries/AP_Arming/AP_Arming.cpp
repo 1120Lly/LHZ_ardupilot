@@ -58,8 +58,8 @@
   #include <AP_CANManager/AP_CANManager.h>
   #include <AP_Common/AP_Common.h>
   #include <AP_Vehicle/AP_Vehicle_Type.h>
-
   #include <AP_PiccoloCAN/AP_PiccoloCAN.h>
+  #include <AP_FOCCAN/AP_FOCCAN.h>
 
   // To be replaced with macro saying if KDECAN library is included
   #if APM_BUILD_COPTER_OR_HELI || APM_BUILD_TYPE(APM_BUILD_ArduPlane) || APM_BUILD_TYPE(APM_BUILD_ArduSub)
@@ -1184,6 +1184,7 @@ bool AP_Arming::can_checks(bool report)
                     check_failed(ARMING_CHECK_SYSTEM, report, "TestCAN: No Arming with TestCAN enabled");
                     break;
                 }
+                case AP_CANManager::Driver_Type_FOCCAN:
                 case AP_CANManager::Driver_Type_EFI_NWPMU:
                 case AP_CANManager::Driver_Type_USD1:
                 case AP_CANManager::Driver_Type_None:
