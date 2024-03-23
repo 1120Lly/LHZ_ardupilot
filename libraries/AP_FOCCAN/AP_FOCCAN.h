@@ -44,7 +44,7 @@ private:
   bool _initialized;
   char _thread_name[16];
   void handle_motor_measure(AP_HAL::CANFrame &frame, uint8_t id);
-  bool send_current(const int16_t d1, const int16_t d2, const int16_t d3, const int16_t d4);
+  bool send_current(const int16_t m1, const int16_t m2, const int16_t m3, const int16_t mode);
   int16_t target_current[4];
   int16_t real_speed[4];
   uint8_t send_current_buffer[8];

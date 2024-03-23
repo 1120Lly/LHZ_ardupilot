@@ -989,7 +989,7 @@ void ModeAuto::wp_run()
     pos_control->update_z_controller();
 
     // call attitude controller with auto yaw
-    attitude_control->input_thrust_vector_heading(pos_control->get_thrust_vector(), auto_yaw.get_heading());
+    attitude_control->input_thrust_vector_heading(pos_control->get_thrust_vector_decoupled(), auto_yaw.get_heading());
 }
 
 // auto_land_run - lands in auto mode
@@ -1030,7 +1030,7 @@ void ModeAuto::circle_run()
     pos_control->update_z_controller();
 
     // call attitude controller with auto yaw
-    attitude_control->input_thrust_vector_heading(pos_control->get_thrust_vector(), auto_yaw.get_heading());
+    attitude_control->input_thrust_vector_heading(pos_control->get_thrust_vector_decoupled(), auto_yaw.get_heading());
 }
 
 #if NAV_GUIDED == ENABLED || AP_SCRIPTING_ENABLED
@@ -1043,6 +1043,7 @@ void ModeAuto::nav_guided_run()
 }
 #endif  // NAV_GUIDED || AP_SCRIPTING_ENABLED
 
+extern float des_forward; // 声明全局变量：期望前向力
 // auto_loiter_run - loiter in AUTO flight mode
 //      called by auto_run at 100hz or more
 void ModeAuto::loiter_run()
@@ -1062,7 +1063,7 @@ void ModeAuto::loiter_run()
     pos_control->update_z_controller();
 
     // call attitude controller with auto yaw
-    attitude_control->input_thrust_vector_heading(pos_control->get_thrust_vector(), auto_yaw.get_heading());
+    attitude_control->input_thrust_vector_heading(pos_control->get_thrust_vector_decoupled(), auto_yaw.get_heading());
 }
 
 // auto_loiter_run - loiter to altitude in AUTO flight mode
@@ -1148,6 +1149,13 @@ void ModeAuto::nav_attitude_time_run()
     const float angle_limit_cd = MAX(1000.0f, MIN(copter.aparm.angle_max, attitude_control->get_althold_lean_angle_max_cd()));
     Vector2f target_rp_cd(nav_attitude_time.roll_deg * 100, nav_attitude_time.pitch_deg * 100);
     target_rp_cd.limit_length(angle_limit_cd);
+
+    float mode_rcin;
+    mode_rcin  = hal.rcin->read(CH_6);
+    mode_rcin  = 0.2f * ( mode_rcin - 1500);
+    if (mode_rcin < 0) { // 拨杆位于上位，动量摆模式，拨杆位于下位，常规模式
+        des_forward = target_rp_cd.y * 0.0002f; // 将x轴期望加速度赋值给全局期望前向力
+        target_rp_cd.y = 0.0f; } // 截断x轴期望加速度，这两行仅在解耦模式下使用
 
     // send targets to attitude controller
     attitude_control->input_euler_angle_roll_pitch_yaw(target_rp_cd.x, target_rp_cd.y, nav_attitude_time.yaw_deg * 100, true);

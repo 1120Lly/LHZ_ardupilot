@@ -4,6 +4,7 @@
  * Init and run calls for stabilize flight mode
  */
 
+extern float des_forward; // 声明全局变量：期望前向力
 // stabilize_run - runs the main stabilize controller
 // should be called at 100hz or more
 void ModeStabilize::run()
@@ -61,6 +62,13 @@ void ModeStabilize::run()
         // do nothing
         break;
     }
+
+    float mode_rcin;
+    mode_rcin  = hal.rcin->read(CH_6);
+    mode_rcin  = 0.2f * ( mode_rcin - 1500);
+    if (mode_rcin < 0) { // 拨杆位于上位，动量摆模式
+        des_forward = target_pitch * 0.0002; // 将期望俯仰角赋值给全局期望前向力
+        target_pitch = 0.0f; } // 截断期望俯仰角  
 
     // call attitude controller
     attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate);

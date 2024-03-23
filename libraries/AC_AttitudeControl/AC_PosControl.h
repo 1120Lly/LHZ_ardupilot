@@ -338,6 +338,7 @@ public:
 
     /// get desired roll and pitch to be passed to the attitude controller
     Vector3f get_thrust_vector() const;
+    Vector3f get_thrust_vector_decoupled() const;
 
     /// get_bearing_to_target_cd - get bearing to target position in centi-degrees
     int32_t get_bearing_to_target_cd() const;

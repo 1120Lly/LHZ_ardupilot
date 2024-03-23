@@ -63,6 +63,7 @@ bool ModePosHold::init(bool ignore_checks)
     return true;
 }
 
+extern float des_forward; // 声明全局变量：期望前向力
 // poshold_run - runs the PosHold controller
 // should be called at 100hz or more
 void ModePosHold::run()
@@ -482,7 +483,14 @@ void ModePosHold::run()
     float angle_max = copter.aparm.angle_max;
     roll = constrain_float(roll, -angle_max, angle_max);
     pitch = constrain_float(pitch, -angle_max, angle_max);
-
+    
+    float mode_rcin;
+    mode_rcin  = hal.rcin->read(CH_6);
+    mode_rcin  = 0.2f * ( mode_rcin - 1500);
+    if (mode_rcin < 0) { // 拨杆位于上位，动量摆模式，拨杆位于下位，常规模式
+        des_forward = pitch * 0.0002f; // 将x轴期望加速度赋值给全局期望前向力
+        pitch = 0.0f; } // 截断x轴期望加速度，这两行仅在解耦模式下使用
+    
     // call attitude controller
     attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(roll, pitch, target_yaw_rate);
 

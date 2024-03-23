@@ -54,7 +54,7 @@ public:
     float get_roll() const { return _pos_control.get_roll_cd(); }
     float get_pitch() const { return _pos_control.get_pitch_cd(); }
     Vector3f get_thrust_vector() const { return _pos_control.get_thrust_vector(); }
-
+    Vector3f get_thrust_vector_decoupled() const { return _pos_control.get_thrust_vector_decoupled(); }
     static const struct AP_Param::GroupInfo var_info[];
 
 protected:

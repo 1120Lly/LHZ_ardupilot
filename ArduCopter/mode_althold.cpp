@@ -21,6 +21,7 @@ bool ModeAltHold::init(bool ignore_checks)
     return true;
 }
 
+extern float des_forward; // 声明全局变量：期望前向力
 // althold_run - runs the althold controller
 // should be called at 100hz or more
 void ModeAltHold::run()
@@ -94,6 +95,13 @@ void ModeAltHold::run()
         pos_control->set_pos_target_z_from_climb_rate_cm(target_climb_rate);
         break;
     }
+
+    float mode_rcin;
+    mode_rcin  = hal.rcin->read(CH_6);
+    mode_rcin  = 0.2f * ( mode_rcin - 1500);
+    if (mode_rcin < 0) { // 拨杆位于上位，动量摆模式
+        des_forward = target_pitch * 0.0002; // 将期望俯仰角赋值给全局期望前向力
+        target_pitch = 0.0f; } // 截断期望俯仰角  
 
     // call attitude controller
     attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(target_roll, target_pitch, target_yaw_rate);

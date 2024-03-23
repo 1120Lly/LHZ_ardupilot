@@ -1,7 +1,4 @@
-/*
- *       AP_MotorsTailsitter.cpp - ArduCopter motors library for tailsitters and bicopters
- *
- */
+// AP_MotorsTailsitter.cpp - ArduCopter motors library for tailsitters and bicopters
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Math/AP_Math.h>
@@ -128,11 +125,16 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     float   thrust_max;                 // highest motor value
     float   thrust_min;                 // lowest motor value
     float   thr_adj = 0.0f;             // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
+    float   pitch_rcin;
+    float   mode_rcin;
+    float   safe_rcin;
 
-    // _pitch_rcin = RC_Channels::get_radio_in(CH_2);
-    _pitch_rcin = hal.rcin->read(CH_2);
-    // _pitch_rcin = 0.0005f * (_pitch_rcin - 1500);
-    _pitch_rcin = 2.0f * (_pitch_rcin - 1500);
+    pitch_rcin = hal.rcin->read(CH_2);
+    mode_rcin  = hal.rcin->read(CH_6);
+    safe_rcin  = hal.rcin->read(CH_7);
+    pitch_rcin = 0.0015f * (pitch_rcin - 1500);
+    mode_rcin  = 0.2f * ( mode_rcin - 1500);
+    safe_rcin  = 0.2f * ( safe_rcin - 1500);
 
     // apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain();
@@ -163,9 +165,14 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     }
 
     // calculate left and right throttle outputs
-    _thrust_left  = throttle_thrust + roll_thrust * 0.5f;
-    _thrust_right = throttle_thrust - roll_thrust * 0.5f;
-
+    if (safe_rcin < 0)         // 拨杆位于上位，停桨
+    {   _thrust_left  = 0.0f;
+        _thrust_right = 0.0f;
+    } else                     // 拨杆位于下位，输出油门
+    {   _thrust_left  = throttle_thrust + roll_thrust * 0.5f;
+        _thrust_right = throttle_thrust - roll_thrust * 0.5f;
+    }
+   
     thrust_max = MAX(_thrust_right,_thrust_left);
     thrust_min = MIN(_thrust_right,_thrust_left);
     if (thrust_max > 1.0f) {
@@ -202,11 +209,26 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     }
 
     // thrust vectoring
-    _tilt_left  = pitch_thrust - yaw_thrust;
-    _tilt_right = pitch_thrust + yaw_thrust;
+    if (mode_rcin < 0)                          // 拨杆位于上位，动量摆模式
+    {   _tilt_left  = des_forward - yaw_thrust;
+        _tilt_right = des_forward + yaw_thrust;
+    } else                                      // 拨杆位于下位，常规模式
+    {   _tilt_left  = pitch_thrust - yaw_thrust;
+        _tilt_right = pitch_thrust + yaw_thrust;
+    }
 
-    FOCCAN->setCurrent(0, (int16_t)_pitch_rcin);
-    FOCCAN->setCurrent(1, (int16_t)_pitch_rcin);
+    pitch_pend = - pitch_thrust * 3600.0f;
+    // pitch_pend = 0.95f * pitch_pend + 0.05f * pitch_pend_last; // 低通滤波
+    // pitch_pend_last = pitch_pend;
+
+    if ( pitch_pend >  1 ) { pitch_pend += 25; } // 无响应死区截断
+    if ( pitch_pend < -1 ) { pitch_pend -= 25; }
+    if ( pitch_pend >  1200 ) { pitch_pend =  1200; } // 降低限幅至1200
+    if ( pitch_pend < -1200 ) { pitch_pend = -1200; }
+    if ( safe_rcin < 0 ) { pitch_pend  = 0; }    // 安全开关处于上位，电流置零
+    
+    FOCCAN->setCurrent(0, (int16_t)pitch_pend);
+    FOCCAN->setCurrent(3, (int16_t) mode_rcin);
 }
 
 // output_test_seq - spin a motor at the pwm value specified

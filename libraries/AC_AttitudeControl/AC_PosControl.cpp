@@ -1042,7 +1042,22 @@ Vector3f AC_PosControl::lean_angles_to_accel(const Vector3f& att_target_euler) c
 Vector3f AC_PosControl::get_thrust_vector() const
 {
     Vector3f accel_target = get_accel_target_cmss();
-    accel_target.z = -GRAVITY_MSS * 100.0f;
+    accel_target.z = - GRAVITY_MSS * 100.0f;
+    return accel_target;
+}
+
+extern float des_forward; // 声明全局变量：期望前向力
+// returns the NED target acceleration vector for attitude control
+Vector3f AC_PosControl::get_thrust_vector_decoupled() const
+{
+    Vector3f accel_target = get_accel_target_cmss();
+    float mode_rcin;
+    mode_rcin  = hal.rcin->read(CH_6);
+    mode_rcin  = 0.2f * ( mode_rcin - 1500);
+    if (mode_rcin < 0) { // 拨杆位于上位，动量摆模式，拨杆位于下位，常规模式
+        des_forward = accel_target.x * 0.5f; // 将x轴期望加速度赋值给全局期望前向力
+        accel_target.x = 0.0f; } // 截断x轴期望加速度，这两行仅在解耦模式下使用  
+    accel_target.z = - GRAVITY_MSS * 100.0f;
     return accel_target;
 }
 

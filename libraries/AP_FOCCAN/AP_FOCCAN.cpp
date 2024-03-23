@@ -82,16 +82,36 @@ bool AP_FOCCAN::write_frame(AP_HAL::CANFrame &out_frame, uint64_t timeout)
 void AP_FOCCAN::handle_motor_measure(AP_HAL::CANFrame &frame, uint8_t id) 
 {   real_speed[id] = (frame.data[4] | frame.data[5] << 8 ); }
 
-bool AP_FOCCAN::send_current(const int16_t d1, const int16_t d2, const int16_t d3, const int16_t d4) 
-{   AP_HAL::CANFrame frame = AP_HAL::CANFrame(0x280, send_current_buffer, 0x08); 
-    frame.data[0] = d1;
-    frame.data[1] = d1 >> 8;
-    frame.data[2] = d2;
-    frame.data[3] = d2 >> 8;
-    frame.data[4] = 0x00;
-    frame.data[5] = 0x00;
-    frame.data[6] = 0x00;
-    frame.data[7] = 0x00;
+bool AP_FOCCAN::send_current(const int16_t m1, const int16_t m2, const int16_t m3, const int16_t mode) 
+{   
+    AP_HAL::CANFrame frame = AP_HAL::CANFrame(0x141, send_current_buffer, 0x08);  
+    if (mode < 0)  // 拨杆位于上位，动量摆模式
+    {   frame.data[0] = 0xA1; // 转矩闭环控制命令
+        frame.data[1] = 0x00;
+        frame.data[2] = 0x00;
+        frame.data[3] = 0x00;
+        frame.data[4] = m1;
+        frame.data[5] = m1 >> 8;
+        frame.data[6] = 0x00;
+        frame.data[7] = 0x00;
+    } else         // 拨杆位于下位，常规模式，无电流
+    {   frame.data[0] = 0xA1; // 转矩闭环控制命令
+        frame.data[1] = 0x00;
+        frame.data[2] = 0x00;
+        frame.data[3] = 0x00;
+        frame.data[4] = 0x00;
+        frame.data[5] = 0x00;
+        frame.data[6] = 0x00;
+        frame.data[7] = 0x00;
+        // frame.data[0] = 0xA4; // 位置闭环控制命令2
+        // frame.data[1] = 0x00;
+        // frame.data[2] = 0xF0; // 转速限制为240dps
+        // frame.data[3] = 0x00;
+        // frame.data[4] = 0xB0; // 位置保持在12度: 1200 = 04 B0
+        // frame.data[5] = 0x04;
+        // frame.data[6] = 0x00;
+        // frame.data[7] = 0x00;
+    }
     uint64_t timeout_us = 10000UL;
     return write_frame(frame, timeout_us);
 }

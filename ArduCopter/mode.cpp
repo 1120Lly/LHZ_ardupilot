@@ -410,6 +410,7 @@ void Copter::notify_flight_mode() {
     notify.set_flight_mode_str(flightmode->name4());
 }
 
+// extern float des_forward; // 声明全局变量：期望前向力
 // get_pilot_desired_angle - transform pilot's roll or pitch input into a desired lean angle
 // returns desired angle in centi-degrees
 void Mode::get_pilot_desired_lean_angles(float &roll_out_cd, float &pitch_out_cd, float angle_max_cd, float angle_limit_cd) const
@@ -424,10 +425,17 @@ void Mode::get_pilot_desired_lean_angles(float &roll_out_cd, float &pitch_out_cd
     //transform pilot's normalised roll or pitch stick input into a roll and pitch euler angle command
     float roll_out_deg;
     float pitch_out_deg;
+    // float mode_rcin;
     rc_input_to_roll_pitch(channel_roll->get_control_in()*(1.0/ROLL_PITCH_YAW_INPUT_MAX), channel_pitch->get_control_in()*(1.0/ROLL_PITCH_YAW_INPUT_MAX), angle_max_cd * 0.01,  angle_limit_cd * 0.01, roll_out_deg, pitch_out_deg);
-
+    
     // Convert to centi-degrees
     roll_out_cd = roll_out_deg * 100.0;
+    // mode_rcin  = hal.rcin->read(CH_6);
+    // mode_rcin  = 0.2f * ( mode_rcin - 1500);
+    // if (mode_rcin < 0) { 
+    //     des_forward = pitch_out_deg * 0.02;
+    //     pitch_out_cd = 0.0f; } // 拨杆位于上位，动量摆模式
+    // else { pitch_out_cd = pitch_out_deg * 100.0; } // 拨杆位于下位，常规模式
     pitch_out_cd = pitch_out_deg * 100.0;
 }
 
