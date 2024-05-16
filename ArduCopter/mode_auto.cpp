@@ -968,6 +968,7 @@ void ModeAuto::takeoff_run()
     auto_takeoff_run();
 }
 
+extern float des_forward; // 声明全局变量：期望前向力
 // auto_wp_run - runs the auto waypoint controller
 //      called by auto_run at 100hz or more
 void ModeAuto::wp_run()
@@ -990,6 +991,10 @@ void ModeAuto::wp_run()
 
     // call attitude controller with auto yaw
     attitude_control->input_thrust_vector_heading(pos_control->get_thrust_vector_decoupled(), auto_yaw.get_heading());
+    des_forward = (wp_nav->get_pitch()) * 0.0002; // 将期望俯仰角赋值给全局期望前向力
+    // attitude_control->input_euler_angle_roll_pitch_yaw(wp_nav->get_roll(), 0.0f, auto_yaw.get_heading().yaw_rate_cds, true);
+    attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(wp_nav->get_roll(), 0.0f, auto_yaw.get_heading().yaw_rate_cds);    
+
 }
 
 // auto_land_run - lands in auto mode
@@ -1030,7 +1035,10 @@ void ModeAuto::circle_run()
     pos_control->update_z_controller();
 
     // call attitude controller with auto yaw
-    attitude_control->input_thrust_vector_heading(pos_control->get_thrust_vector_decoupled(), auto_yaw.get_heading());
+
+    // attitude_control->input_thrust_vector_heading(pos_control->get_thrust_vector_decoupled(), auto_yaw.get_heading());
+    des_forward = (copter.circle_nav->get_pitch()) * 0.0002; // 将期望俯仰角赋值给全局期望前向力
+    attitude_control->input_euler_angle_roll_pitch_yaw(copter.circle_nav->get_roll(), 0.0f, auto_yaw.get_heading().yaw_angle_cd, true);
 }
 
 #if NAV_GUIDED == ENABLED || AP_SCRIPTING_ENABLED
@@ -1054,6 +1062,12 @@ void ModeAuto::loiter_run()
         return;
     }
 
+    // // accept pilot input of yaw
+    // float target_yaw_rate = 0;
+    // if (!copter.failsafe.radio) {
+    //     target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->norm_input_dz());
+    // }
+
     // set motors to full range
     motors->set_desired_spool_state(AP_Motors::DesiredSpoolState::THROTTLE_UNLIMITED);
 
@@ -1063,7 +1077,9 @@ void ModeAuto::loiter_run()
     pos_control->update_z_controller();
 
     // call attitude controller with auto yaw
-    attitude_control->input_thrust_vector_heading(pos_control->get_thrust_vector_decoupled(), auto_yaw.get_heading());
+    // attitude_control->input_thrust_vector_heading(pos_control->get_thrust_vector_decoupled(), auto_yaw.get_heading());
+    des_forward = (wp_nav->get_pitch()) * 0.0002; // 将期望俯仰角赋值给全局期望前向力
+    attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(wp_nav->get_roll(), 0.0f, auto_yaw.get_heading().yaw_rate_cds);
 }
 
 // auto_loiter_run - loiter to altitude in AUTO flight mode

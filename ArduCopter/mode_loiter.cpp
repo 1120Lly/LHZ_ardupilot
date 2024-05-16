@@ -79,6 +79,7 @@ void ModeLoiter::precision_loiter_xy()
 }
 #endif
 
+extern float des_forward; // 声明全局变量：期望前向力
 // loiter_run - runs the loiter controller
 // should be called at 100hz or more
 void ModeLoiter::run()
@@ -128,7 +129,9 @@ void ModeLoiter::run()
         attitude_control->reset_yaw_target_and_rate();
         pos_control->relax_z_controller(0.0f);   // forces throttle output to decay to zero
         loiter_nav->init_target();
-        attitude_control->input_thrust_vector_rate_heading(loiter_nav->get_thrust_vector_decoupled(), target_yaw_rate, false);
+        // attitude_control->input_thrust_vector_rate_heading(loiter_nav->get_thrust_vector_decoupled(), target_yaw_rate, false);
+        des_forward = (loiter_nav->get_pitch()) * 0.0002; // 将期望俯仰角赋值给全局期望前向力
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(loiter_nav->get_roll(), 0.0f, target_yaw_rate);
         break;
 
     case AltHold_Landed_Ground_Idle:
@@ -138,7 +141,9 @@ void ModeLoiter::run()
     case AltHold_Landed_Pre_Takeoff:
         attitude_control->reset_rate_controller_I_terms_smoothly();
         loiter_nav->init_target();
-        attitude_control->input_thrust_vector_rate_heading(loiter_nav->get_thrust_vector_decoupled(), target_yaw_rate, false);
+        // attitude_control->input_thrust_vector_rate_heading(loiter_nav->get_thrust_vector_decoupled(), target_yaw_rate, false);
+        des_forward = (loiter_nav->get_pitch()) * 0.0002; // 将期望俯仰角赋值给全局期望前向力
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(loiter_nav->get_roll(), 0.0f, target_yaw_rate);
         pos_control->relax_z_controller(0.0f);   // forces throttle output to decay to zero
         break;
 
@@ -158,7 +163,10 @@ void ModeLoiter::run()
         loiter_nav->update();
 
         // call attitude controller
-        attitude_control->input_thrust_vector_rate_heading(loiter_nav->get_thrust_vector_decoupled(), target_yaw_rate, false);
+        // attitude_control->input_thrust_vector_rate_heading(loiter_nav->get_thrust_vector_decoupled(), target_yaw_rate, false);
+        des_forward = (loiter_nav->get_pitch()) * 0.0002; // 将期望俯仰角赋值给全局期望前向力
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(loiter_nav->get_roll(), 0.0f, target_yaw_rate);
+
         break;
 
     case AltHold_Flying:
@@ -186,7 +194,9 @@ void ModeLoiter::run()
 #endif
 
         // call attitude controller
-        attitude_control->input_thrust_vector_rate_heading(loiter_nav->get_thrust_vector_decoupled(), target_yaw_rate, false);
+        // attitude_control->input_thrust_vector_rate_heading(loiter_nav->get_thrust_vector_decoupled(), target_yaw_rate, false);
+        des_forward = (loiter_nav->get_pitch()) * 0.0002; // 将期望俯仰角赋值给全局期望前向力
+        attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(loiter_nav->get_roll(), 0.0f, target_yaw_rate);
 
         // get avoidance adjusted climb rate
         target_climb_rate = get_avoidance_adjusted_climbrate(target_climb_rate);
