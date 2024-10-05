@@ -222,6 +222,7 @@ bool Mode::_pre_arm_checks(size_t buflen, char *buffer) const
     return true;
 }
 
+// 摇杆混合与姿态稳定控制
 void Mode::run()
 {
     // Direct stick mixing functionality has been removed, so as not to remove all stick mixing from the user completely
