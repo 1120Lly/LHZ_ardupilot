@@ -33,6 +33,7 @@
 #include <AP_Compass/AP_Compass.h>
 #include <AP_Logger/AP_Logger.h>
 #include <AP_Vehicle/AP_Vehicle_Type.h>
+#include <RC_Channel/RC_Channel.h>
 
 extern const AP_HAL::HAL& hal;
 
@@ -86,11 +87,14 @@ AP_AHRS_DCM::update()
     // paranoid check for bad values in the DCM matrix
     check_matrix();
 
-    // calculate the euler angles and DCM matrix which will be used
-    // for high level navigation control. Apply trim such that a
-    // positive trim value results in a positive vehicle rotation
-    // about that axis (ie a negative offset)
+    // calculate the euler angles and DCM matrix.
+    Matrix3f board_rotation;
+    RC_Channel *rc8 = rc().channel(CH_8);
+    float board_rotate = rc8->get_radio_in();   // 将遥控器第8通道信号赋值给变姿角
+    board_rotate= (board_rotate -1500) *0.2f;   // 这里决定着倾斜角最大能转多少度
+    board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
     _body_dcm_matrix = _dcm_matrix * AP::ahrs().get_rotation_vehicle_body_to_autopilot_body();
+    _body_dcm_matrix = _body_dcm_matrix * board_rotation;
     _body_dcm_matrix.to_euler(&roll, &pitch, &yaw);
 
     // pre-calculate some trig for CPU purposes:

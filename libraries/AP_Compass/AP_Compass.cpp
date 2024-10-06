@@ -9,6 +9,7 @@
 #include <AP_ExternalAHRS/AP_ExternalAHRS.h>
 #include <AP_CustomRotations/AP_CustomRotations.h>
 #include <GCS_MAVLink/GCS.h>
+#include <RC_Channel/RC_Channel.h>
 
 #include "AP_Compass_config.h"
 
@@ -2009,6 +2010,13 @@ Compass::calculate_heading(const Matrix3f &dcm_matrix, uint8_t i) const
 
     // Tilt compensated magnetic field Y component:
     const Vector3f &field = get_field(i);
+    // Vector3f field = get_field(i);
+    // Matrix3f board_rotation;
+    // RC_Channel *rc8 = rc().channel(CH_8);
+    // float board_rotate = rc8->get_radio_in();   // 将遥控器第8通道信号赋值给变姿角
+    // board_rotate= (board_rotate -1500) *0.2f; // 这里决定着倾斜角最大能转多少度
+    // board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
+    // field = field * board_rotation;
 
     const float headY = field.y * dcm_matrix.c.z - field.z * dcm_matrix.c.y;
 

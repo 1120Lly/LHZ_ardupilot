@@ -60,6 +60,12 @@ void AP_AHRS_View::set_pitch_trim(float trim_deg) {
 // update state
 void AP_AHRS_View::update()
 {
+    Matrix3f board_rotation;                                    // 新加语句
+    RC_Channel *rc8 = rc().channel(CH_8);
+    float board_rotate = rc8->get_radio_in();                   // 将遥控器第8通道信号赋值给变姿角
+    board_rotate= (board_rotate -1500) *0.2f;                   // 新加语句，转换为最大倾斜角度
+    board_rotation.from_euler(radians(0), radians(board_rotate), radians(0)); // 新加语句
+    
     rot_body_to_ned = ahrs.get_rotation_body_to_ned();
     gyro = ahrs.get_gyro();
 
@@ -68,6 +74,7 @@ void AP_AHRS_View::update()
         gyro = rot_view * gyro;
     }
 
+    gyro = board_rotation * gyro;    // 对陀螺仪数据进行自定义俯仰角度旋转
     rot_body_to_ned.to_euler(&roll, &pitch, &yaw);
 
     roll_sensor  = degrees(roll) * 100;
@@ -83,8 +90,16 @@ void AP_AHRS_View::update()
 }
 
 // return a smoothed and corrected gyro vector using the latest ins data (which may not have been consumed by the EKF yet)
-Vector3f AP_AHRS_View::get_gyro_latest(void) const {
-    return rot_view * ahrs.get_gyro_latest();
+Vector3f AP_AHRS_View::get_gyro_latest(void) const 
+{
+    Matrix3f board_rotation;
+    Vector3f gyro_latest = rot_view * ahrs.get_gyro_latest();   // 获取最新的陀螺仪数据
+    RC_Channel *rc8 = rc().channel(CH_8);
+    float board_rotate = rc8->get_radio_in();                   // 将遥控器第8通道信号赋值给变姿角
+    board_rotate= (board_rotate -1500) *0.2f;                   // 转换为最大倾斜角度
+    board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
+    gyro_latest = board_rotation * gyro_latest;                 // 陀螺仪数据进行自定义俯仰角度旋转
+    return gyro_latest;                                         // 返回处理后的陀螺仪数据
 }
 
 // rotate a 2D vector from earth frame to body frame

@@ -646,12 +646,16 @@ void AP_AHRS::update_EKF3(void)
     if (_ekf3_started) {
         EKF3.UpdateFilter();
         if (_active_EKF_type() == EKFType::THREE) {
-            Vector3f eulers;
+            // Vector3f eulers;
             EKF3.getRotationBodyToNED(state.dcm_matrix);
-            EKF3.getEulerAngles(eulers);
-            roll  = eulers.x;
-            pitch = eulers.y;
-            yaw   = eulers.z;
+            // EKF3.getEulerAngles(eulers);
+            // roll  = eulers.x;
+            // pitch = eulers.y;
+            // yaw   = eulers.z;
+            // copy_estimates_from_backend_estimates(dcm_estimates);
+            roll = dcm_estimates.roll_rad;
+            pitch = dcm_estimates.pitch_rad;
+            yaw = dcm_estimates.yaw_rad;
 
             update_cd_values();
             update_trig();
@@ -660,18 +664,21 @@ void AP_AHRS::update_EKF3(void)
 
             // Use the primary EKF to select the primary gyro
             const int8_t primary_imu = EKF3.getPrimaryCoreIMUIndex();
-            const uint8_t primary_gyro = primary_imu>=0?primary_imu:_ins.get_primary_gyro();
+            // const uint8_t primary_gyro = primary_imu>=0?primary_imu:_ins.get_primary_gyro();
             const uint8_t primary_accel = primary_imu>=0?primary_imu:_ins.get_primary_accel();
 
             // get gyro bias for primary EKF and change sign to give gyro drift
             // Note sign convention used by EKF is bias = measurement - truth
-            Vector3f drift;
-            EKF3.getGyroBias(-1, drift);
-            state.gyro_drift = -drift;
+            // Vector3f drift;
+            // EKF3.getGyroBias(-1, drift);
+            // state.gyro_drift = -drift;
 
             // use the same IMU as the primary EKF and correct for gyro drift
-            state.gyro_estimate = _ins.get_gyro(primary_gyro) + state.gyro_drift;
-
+            // state.gyro_estimate = _ins.get_gyro(primary_gyro) + state.gyro_drift;
+            
+            state.gyro_drift = dcm_estimates.gyro_drift;
+            state.gyro_estimate = dcm_estimates.gyro_estimate;
+            
             // get 3-axis accel bias estimates for active EKF (this is usually for the primary IMU)
             Vector3f &abias = state.accel_bias;
             EKF3.getAccelBias(-1,abias);
@@ -1099,12 +1106,14 @@ bool AP_AHRS::use_compass(void)
 #endif
 #if HAL_NAVEKF2_AVAILABLE
     case EKFType::TWO:
-        return EKF2.use_compass();
+        // return EKF2.use_compass();
+        return dcm.use_compass();
 #endif
 
 #if HAL_NAVEKF3_AVAILABLE
     case EKFType::THREE:
-        return EKF3.use_compass();
+        // return EKF3.use_compass();
+        return dcm.use_compass();
 #endif
 
 #if AP_AHRS_SIM_ENABLED
@@ -1141,7 +1150,8 @@ bool AP_AHRS::_get_quaternion(Quaternion &quat) const
         if (!_ekf2_started) {
             return false;
         }
-        EKF2.getQuaternion(quat);
+        // EKF2.getQuaternion(quat);
+        if (!dcm.get_quaternion(quat)) { return false; }
         break;
 #endif
 #if HAL_NAVEKF3_AVAILABLE
@@ -1149,7 +1159,8 @@ bool AP_AHRS::_get_quaternion(Quaternion &quat) const
         if (!_ekf3_started) {
             return false;
         }
-        EKF3.getQuaternion(quat);
+        // EKF3.getQuaternion(quat);
+        if (!dcm.get_quaternion(quat)) { return false; }
         break;
 #endif
 #if AP_AHRS_SIM_ENABLED
@@ -1200,7 +1211,10 @@ bool AP_AHRS::_get_secondary_attitude(Vector3f &eulers) const
 #if HAL_NAVEKF3_AVAILABLE
     case EKFType::THREE:
         // EKF3 is secondary
-        EKF3.getEulerAngles(eulers);
+        // EKF3.getEulerAngles(eulers);
+        eulers[0] = dcm_estimates.roll_rad;
+        eulers[1] = dcm_estimates.pitch_rad;
+        eulers[2] = dcm_estimates.yaw_rad;
         return _ekf3_started;
 #endif
 
@@ -1251,7 +1265,8 @@ bool AP_AHRS::_get_secondary_quaternion(Quaternion &quat) const
         if (!_ekf2_started) {
             return false;
         }
-        EKF2.getQuaternion(quat);
+        // EKF2.getQuaternion(quat);
+        if (!dcm.get_quaternion(quat)) { return false; }
         break;
 #endif
 
@@ -1261,7 +1276,8 @@ bool AP_AHRS::_get_secondary_quaternion(Quaternion &quat) const
         if (!_ekf3_started) {
             return false;
         }
-        EKF3.getQuaternion(quat);
+        // EKF3.getQuaternion(quat);
+        if (!dcm.get_quaternion(quat)) { return false; }
         break;
 #endif
 
