@@ -214,6 +214,9 @@ void AP_MotorsMatrix::output_armed_stabilizing()
 {
     // apply voltage and air pressure compensation
     const float compensation_gain = thr_lin.get_compensation_gain(); // compensation for battery voltage and altitude
+    float   safe_rcin;
+    safe_rcin  = hal.rcin->read(CH_5);
+    safe_rcin  = 0.2f * ( safe_rcin - 1500);
 
     // pitch thrust input value, +/- 1.0
     const float roll_thrust = (_roll_in + _roll_in_ff) * compensation_gain;
@@ -393,7 +396,11 @@ void AP_MotorsMatrix::output_armed_stabilizing()
     const float throttle_thrust_best_plus_adj = throttle_thrust_best_rpy + thr_adj;
     for (uint8_t i = 0; i < AP_MOTORS_MAX_NUM_MOTORS; i++) {
         if (motor_enabled[i]) {
-            _thrust_rpyt_out[i] = (throttle_thrust_best_plus_adj * _throttle_factor[i]) + (rpy_scale * _thrust_rpyt_out[i]);
+            if (safe_rcin < 0)         // 拨杆位于上位，停桨
+            {   _thrust_rpyt_out[i] = 0.0f;
+            } else                     // 拨杆位于下位，输出油门
+            {   _thrust_rpyt_out[i] = (throttle_thrust_best_plus_adj * _throttle_factor[i]) + (rpy_scale * _thrust_rpyt_out[i]);
+            }
         }
     }
 
