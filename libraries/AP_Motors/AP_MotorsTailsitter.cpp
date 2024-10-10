@@ -49,6 +49,10 @@ void AP_MotorsTailsitter::init(motor_frame_class frame_class, motor_frame_type f
     SRV_Channels::set_aux_channel_default(SRV_Channel::k_elevon_left, CH_4);
     SRV_Channels::set_angle(SRV_Channel::k_elevon_left, SERVO_OUTPUT_RANGE);
 
+    // airspd servo defaults to servo output 6
+    SRV_Channels::set_aux_channel_default(SRV_Channel::k_tilt_airspd, CH_6);
+    SRV_Channels::set_angle(SRV_Channel::k_tilt_airspd, SERVO_OUTPUT_RANGE);
+
     _mav_type = MAV_TYPE_VTOL_DUOROTOR;
 
     // record successful initialisation if what we setup was the desired frame_class
@@ -110,6 +114,7 @@ void AP_MotorsTailsitter::output_to_motors()
 
     SRV_Channels::set_output_scaled(SRV_Channel::k_elevon_left, _tilt_left*SERVO_OUTPUT_RANGE);
     SRV_Channels::set_output_scaled(SRV_Channel::k_elevon_right, _tilt_right*SERVO_OUTPUT_RANGE);
+    SRV_Channels::set_output_scaled(SRV_Channel::k_tilt_airspd, _tilt_airspd*SERVO_OUTPUT_RANGE);
 
 }
 
@@ -140,22 +145,38 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     float   yaw_thrust;                 // yaw thrust input value, +/- 1.0
     float   throttle_thrust;            // throttle thrust input value, 0.0 - 1.0
     float   rotate_angle;        // 旋转角输入值，最左为0，最右为1
-    float   rate;                // 舵机俯仰控制权重，水平为0，朝下为1，朝上为-1
+    float   beta;                // 期望俯仰变姿角，水平为0，朝下为1，朝上为-1
+    float   sinbeta, cosbeta;    // 期望俯仰变姿角正弦余弦
+    float   yaw_rate;
+    float   yaw_man;
+    float   yaw_cmd;
+    float   pitch_virtual;
 
+    uint16_t rcin[8] = {};
+    rc().get_radio_in (rcin, 8);
+   
     // apply voltage and air pressure compensation
     // const float compensation_gain = thr_lin.get_compensation_gain();
     roll_thrust = _roll_in + _roll_in_ff;
     pitch_thrust = _pitch_in + _pitch_in_ff;
     yaw_thrust = _yaw_in + _yaw_in_ff;
-    throttle_thrust = get_throttle();
-  
-    RC_Channel *rc8 = rc().channel(CH_8);
-    rotate_angle = rc8->get_radio_in();               // 将遥控器第8通道信号赋值给变姿角
-    rotate_angle= (rotate_angle -1500) *0.002f;              // 转换为标准值
-    rate = rotate_angle;
+    throttle_thrust = rcin[2];
+    throttle_thrust = (throttle_thrust - 1100) * 0.001f;
     
-    if (roll_thrust >= 1.0) {
-        // cannot split motor outputs by more than 1
+    const AP_AHRS &ahrs_falcon = AP::ahrs();
+    yaw_rate = ahrs_falcon.get_gyro().z;
+    yaw_man = rcin[3];
+    yaw_man = (yaw_man - 1510) * 0.002f;
+    yaw_cmd = yaw_rate *0.1f + yaw_man *0.3f;
+    pitch_virtual = (ahrs_falcon.get_pitch()) * 0.6366f; // 弧度转0-1
+        
+    rotate_angle = rcin[6];                           // 将遥控器第7通道信号赋值给变姿角
+    rotate_angle = (rotate_angle - 1000) * 0.001f;    // 转换为标准值
+    beta = -rotate_angle * 1.57f;                     // 期望俯仰变姿角，水平为0，朝上为1.57，朝下为-1.57
+    sinbeta = sinf(beta);                             // 期望俯仰变姿角正弦，水平为0，朝上为1，朝下为-1
+    cosbeta = cosf(beta);                             // 期望俯仰变姿角余弦，水平为1，朝上为0，朝下为0
+    
+    if (roll_thrust >= 1.0) {    // cannot split motor outputs by more than 1
         roll_thrust = 1;
         limit.roll = true;
     }
@@ -166,8 +187,8 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     { throttle_thrust = 1.0f; limit.throttle_upper = true; }
 
     // calculate left and right throttle outputs
-    _thrust_left  = throttle_thrust + roll_thrust * 0.5f;
-    _thrust_right = throttle_thrust - roll_thrust * 0.5f;
+    _thrust_left  = throttle_thrust + cosbeta *roll_thrust *0.5f - sinbeta *yaw_cmd;
+    _thrust_right = throttle_thrust - cosbeta *roll_thrust *0.5f + sinbeta *yaw_cmd;
 
     // Add adjustment to reduce average throttle
     _thrust_left  = constrain_float(_thrust_left , 0.0f, 1.0f);
@@ -177,8 +198,9 @@ void AP_MotorsTailsitter::output_armed_stabilizing()
     _throttle_out = throttle_thrust;
 
     // thrust vectoring
-    _tilt_left  = rate * pitch_thrust - yaw_thrust;
-    _tilt_right = rate * pitch_thrust + yaw_thrust;
+    _tilt_left  = pitch_thrust *1.0f + cosbeta *yaw_thrust + sinbeta *roll_thrust *0.5f;
+    _tilt_right = pitch_thrust *1.0f - cosbeta *yaw_thrust - sinbeta *roll_thrust *0.5f;
+    _tilt_airspd = rotate_angle - 0.5f - pitch_virtual;
 }
 
 // output_test_seq - spin a motor at the pwm value specified
@@ -203,6 +225,10 @@ void AP_MotorsTailsitter::_output_test_seq(uint8_t motor_seq, int16_t pwm)
         case 4:
             // left tilt servo
             SRV_Channels::set_output_pwm(SRV_Channel::k_elevon_left, pwm);
+            break;
+        case 5:
+            // airspd tilt servo
+            SRV_Channels::set_output_pwm(SRV_Channel::k_tilt_airspd, pwm);
             break;
         default:
             // do nothing

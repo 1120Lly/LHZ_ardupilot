@@ -89,9 +89,10 @@ AP_AHRS_DCM::update()
 
     // calculate the euler angles and DCM matrix.
     Matrix3f board_rotation;
-    RC_Channel *rc8 = rc().channel(CH_8);
-    float board_rotate = rc8->get_radio_in();   // 将遥控器第8通道信号赋值给变姿角
-    board_rotate= (board_rotate -1500) *0.2f;   // 这里决定着倾斜角最大能转多少度
+    uint16_t rcin[8] = {};
+    rc().get_radio_in (rcin, 8);
+    float board_rotate = rcin[6];      // 将遥控器第7通道信号赋值给变姿角
+    board_rotate = (board_rotate -1000) *0.09f;   // 这里决定着倾斜角最大能转多少度
     board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));
     _body_dcm_matrix = _dcm_matrix * AP::ahrs().get_rotation_vehicle_body_to_autopilot_body();
     _body_dcm_matrix = _body_dcm_matrix * board_rotation;
@@ -171,6 +172,14 @@ void AP_AHRS_DCM::matrix_update(void)
     // the _P_gain() calculation, which can lead to a very large P
     // value
     _omega = _ins.get_gyro() + _omega_I;
+
+    Matrix3f board_rotation;
+    uint16_t rcin[8] = {};
+    rc().get_radio_in (rcin, 8);
+    float board_rotate = rcin[6];      // 将遥控器第7通道信号赋值给变姿角
+    board_rotate = (board_rotate -1000) *0.09f;   // 这里决定着倾斜角最大能转多少度
+    board_rotation.from_euler(radians(0), radians(board_rotate), radians(0));    
+    _omega = board_rotation * _omega;
 }
 
 

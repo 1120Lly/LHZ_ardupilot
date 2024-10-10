@@ -33,6 +33,10 @@ extern const AP_HAL::HAL& hal;
 
 #include "RC_Channel.h"
 
+uint32_t now_ms;
+uint32_t last_ms;
+uint32_t dt_ms;
+uint16_t chan6 = 1000; // 传递变量
 /*
   channels group object constructor
  */
@@ -62,10 +66,30 @@ uint8_t RC_Channels::get_radio_in(uint16_t *chans, const uint8_t num_channels)
     memset(chans, 0, num_channels*sizeof(*chans));
 
     const uint8_t read_channels = MIN(num_channels, NUM_RC_CHANNELS);
-    for (uint8_t i = 0; i < read_channels; i++) {
-        chans[i] = channel(i)->get_radio_in();
+    now_ms = AP_HAL::millis();
+    dt_ms = dt_ms + now_ms - last_ms;
+
+    for (uint8_t i = 0; i < read_channels; i++) 
+    {
+        if (i==6) // chans[6]其实是第7通道，chans[7]其实是第8通道
+        {   
+            if( chans[5] <= 1200 ) // 拨杆朝下则递减
+            {   if (dt_ms>10)  { chan6 = chan6 - 1; chans[6] = chan6; dt_ms = 0; }
+                else  { chan6 = chan6; chans[6] = chan6; } }
+            if( chans[5] > 1200 && chans[5] < 1800 ) // 拨杆中位则保持
+            {   chan6 = chan6;  chans[6] = chan6; }
+            if( chans[5] >= 1800 ) // 拨杆朝上则递增
+            {   if (dt_ms>10)  { chan6 = chan6 + 1; chans[6] = chan6; dt_ms = 0; }
+                else  { chan6 = chan6;  chans[6] = chan6; } }
+            if( chan6 >= 2000 ) { chan6 = 2000;  chans[6] = chan6; } // 最大限幅
+            if( chan6 <= 1000 ) { chan6 = 1000;  chans[6] = chan6; } // 最小限幅
+            // chans[6] = 1500; // 测试语句
+        }
+        else
+        {   chans[i] = channel(i)->get_radio_in();   }  
     }
 
+    last_ms = AP_HAL::millis();
     return read_channels;
 }
 
